@@ -1,13 +1,13 @@
-import { Audio } from "expo-av";
+import { useAudioPlayer } from "expo-audio";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-    Animated,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,20 +30,11 @@ export default function CarouselScreen() {
   const insets = useSafeAreaInsets();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer(ITEMS[currentIndex].sound);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Cleanup sound on unmount
-  useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-    };
-  }, []);
-
-  const playSound = async () => {
+  const playSound = () => {
     // Animate the image on press
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -58,12 +49,9 @@ export default function CarouselScreen() {
       }),
     ]).start();
 
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-    }
-    const { sound } = await Audio.Sound.createAsync(ITEMS[currentIndex].sound);
-    soundRef.current = sound;
-    await sound.playAsync();
+    // Restart from beginning and play
+    player.seekTo(0);
+    player.play();
   };
 
   const navigate = (direction: "left" | "right") => {
