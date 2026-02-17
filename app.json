@@ -22,7 +22,18 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CAMERA",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.bilisimcevre.sony"
     },
@@ -49,7 +60,9 @@
         {
           "microphonePermission": "Allow this app to access your microphone."
         }
-      ]
+      ],
+      "@config-plugins/react-native-webrtc",
+      "@daily-co/config-plugin-rn-daily-js"
     ],
     "experiments": {
       "typedRoutes": true,
