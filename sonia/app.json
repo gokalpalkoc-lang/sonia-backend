@@ -60,8 +60,7 @@
         {
           "microphonePermission": "Allow this app to access your microphone."
         }
-      ],
-      "@daily-co/config-plugin-rn-daily-js"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
