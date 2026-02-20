@@ -99,6 +99,45 @@
   box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
 }
 
+/* Assistant Select */
+.assistant-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background-color: white;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.assistant-select:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
+}
+
+.refresh-button {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: #f57c00;
+}
+
+.refresh-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
 /* Call Section */
 .call-section {
   max-width: 500px;

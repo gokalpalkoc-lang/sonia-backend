@@ -8,6 +8,7 @@ interface AssistantCreatorProps {
 function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
   const [prompt, setPrompt] = useState('');
   const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState('');
+  const [assistantName, setAssistantName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdAssistantId, setCreatedAssistantId] = useState('');
@@ -23,6 +24,11 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
       return;
     }
 
+    if (!assistantName.trim()) {
+      setError('Please enter an assistant name');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
@@ -34,16 +40,22 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
           'Authorization': `Bearer ${VAPI_API_KEY}`,
         },
         body: JSON.stringify({
-          name: 'Custom Assistant',
+          name: assistantName,
           model: {
             provider: 'openai',
             model: DEFAULT_MODEL,
             systemPrompt: prompt,
+            maxTokens: 800,
           },
           voice: {
             provider: '11labs',
             voiceId: elevenLabsVoiceId,
           },
+          transcriber: {
+            provider: '11labs',
+            language: 'tr',
+          },
+          firstMessage: 'Merhaba, nasılsın?',
         }),
       });
 
@@ -70,6 +82,18 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
     <div className="assistant-creator">
       <h2>Create New Vapi Assistant</h2>
       
+      <div className="form-group">
+        <label htmlFor="assistantName">Assistant Name:</label>
+        <input
+          id="assistantName"
+          type="text"
+          value={assistantName}
+          onChange={(e) => setAssistantName(e.target.value)}
+          placeholder="Enter the assistant name..."
+          disabled={isLoading}
+        />
+      </div>
+
       <div className="form-group">
         <label htmlFor="prompt">System Prompt:</label>
         <textarea
