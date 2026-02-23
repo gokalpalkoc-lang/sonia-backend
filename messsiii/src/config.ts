@@ -8,6 +8,9 @@ export const ASSISTANT_ID = "2135f31f-5c85-4517-9574-571a1b1d0e38";
 // This should be kept secret and not exposed in frontend for production
 export const VAPI_API_KEY = "475a65ff-0aa5-4dac-b9f2-52a16f2c7bba";
 
+// Django API base URL
+export const API_BASE_URL = "http://10.10.1.189:8000";
+
 // Default model to use for new assistants
 export const DEFAULT_MODEL = "gpt-5-mini";
 

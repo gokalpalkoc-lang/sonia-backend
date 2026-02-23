@@ -154,7 +154,7 @@ const apiCommandPlugin = (): Plugin => {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), apiCommandPlugin()],
+  plugins: [react()],
   server: {
     host: '0.0.0.0',
     port: 5174,

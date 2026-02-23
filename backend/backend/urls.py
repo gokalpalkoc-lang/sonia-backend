@@ -16,7 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from api import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/commands', views.commands, name='commands'),
+    path('api/commands/called', views.update_called, name='update_called'),
+    path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
 ]

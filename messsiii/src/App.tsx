@@ -2,7 +2,7 @@ import Vapi from '@vapi-ai/web';
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import AssistantCreator from './AssistantCreator';
-import { ASSISTANT_ID, VAPI_API_KEY, VAPI_PUBLIC_KEY } from './config';
+import { API_BASE_URL, ASSISTANT_ID, VAPI_API_KEY, VAPI_PUBLIC_KEY } from './config';
 
 interface Assistant {
   id: string;
@@ -94,7 +94,7 @@ function App() {
         setRefreshKey(k => k + 1); // Force UI refresh
 
         try {
-          await fetch('/api/commands/called', {
+          await fetch(`${API_BASE_URL}/api/commands/called`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ assistantId: cmd.assistantId, date: currentDate })
@@ -217,7 +217,7 @@ function App() {
   useEffect(() => {
     const pollCommands = async () => {
       try {
-        const response = await fetch('/api/commands');
+        const response = await fetch(`${API_BASE_URL}/api/commands`);
         if (response.ok) {
           const data = await response.json();
           if (data.commands && data.commands.length > lastCommandCount.current) {
@@ -274,7 +274,7 @@ function App() {
           
           // Update last called date on server
           try {
-            await fetch('/api/commands/called', {
+            await fetch(`${API_BASE_URL}/api/commands/called`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ assistantId: cmd.assistantId, date: currentDate })
