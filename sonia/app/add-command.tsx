@@ -1,35 +1,82 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCommands } from "@/context/commands-context";
+
+// Server URL for messsiii - change this to your computer's network IP
+// The phone needs to access the computer's IP, not localhost
+const MESSIII_SERVER_URL = "http://10.10.1.189:5174";
 
 export default function AddCommandScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addCommand } = useCommands();
 
+  const [assistantName, setAssistantName] = useState("");
   const [timeInput, setTimeInput] = useState("");
   const [promptInput, setPromptInput] = useState("");
+  const [firstMessageInput, setFirstMessageInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAppend = () => {
-    if (!timeInput.trim() || !promptInput.trim()) {
-      Alert.alert("Missing Fields", "Please enter both time and prompt.");
+  const handleAppend = async () => {
+    if (!assistantName.trim()) {
+      Alert.alert("Missing Fields", "Please enter an assistant name.");
+      return;
+    }
+    if (!timeInput.trim() || !promptInput.trim() || !firstMessageInput.trim()) {
+      Alert.alert("Missing Fields", "Please enter time, prompt, and first message.");
       return;
     }
 
+    const newCommand = { 
+      assistantName: assistantName.trim(),
+      time: timeInput.trim(), 
+      prompt: promptInput.trim(),
+      firstMessage: firstMessageInput.trim(),
+      expanded: false 
+    };
+
+    // Add command locally first
     addCommand({ time: timeInput.trim(), prompt: promptInput.trim(), expanded: false });
-    router.back();
+
+    // Send command to messsiii server
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${MESSIII_SERVER_URL}/api/commands`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCommand),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Command sent to messsiii successfully');
+        if (data.assistantId) {
+          console.log('Created assistant ID:', data.assistantId);
+        }
+      } else {
+        console.error('Failed to send command to messsiii:', response.status);
+      }
+    } catch (error) {
+      console.error('Error sending command to messsiii:', error);
+      // Don't show error to user, just log it - command was still added locally
+    } finally {
+      setIsLoading(false);
+      router.back();
+    }
   };
 
   return (
@@ -46,8 +93,19 @@ export default function AddCommandScreen() {
       >
         <Text style={styles.title}>New Command</Text>
         <Text style={styles.subtitle}>
-          Set a time and a prompt for the command.
+          Set an assistant name, time, system prompt, and first message for the command.
         </Text>
+
+        {/* Assistant Name */}
+        <Text style={styles.label}>Assistant Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., My Assistant"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          value={assistantName}
+          onChangeText={setAssistantName}
+          autoFocus
+        />
 
         {/* Time */}
         <Text style={styles.label}>Time</Text>
@@ -58,11 +116,10 @@ export default function AddCommandScreen() {
           value={timeInput}
           onChangeText={setTimeInput}
           keyboardType="numbers-and-punctuation"
-          autoFocus
         />
 
-        {/* Prompt */}
-        <Text style={styles.label}>Prompt</Text>
+        {/* Prompt (System Prompt) */}
+        <Text style={styles.label}>System Prompt</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           placeholder="Describe the command..."
@@ -73,12 +130,27 @@ export default function AddCommandScreen() {
           textAlignVertical="top"
         />
 
+        {/* First Message */}
+        <Text style={styles.label}>First Message</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="What should the assistant say first?"
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          value={firstMessageInput}
+          onChangeText={setFirstMessageInput}
+          multiline
+          textAlignVertical="top"
+        />
+
         <TouchableOpacity
-          style={styles.submitButton}
+          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
           onPress={handleAppend}
           activeOpacity={0.8}
+          disabled={isLoading}
         >
-          <Text style={styles.submitText}>Save Command</Text>
+          <Text style={styles.submitText}>
+            {isLoading ? 'Creating...' : 'Create Assistant'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -145,6 +217,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
     marginTop: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "rgba(79,70,229,0.5)",
   },
   submitText: {
     color: "#fff",
