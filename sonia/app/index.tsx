@@ -89,7 +89,7 @@ export default function CarouselScreen() {
 
         <TouchableOpacity
           style={styles.aiButton}
-          onPress={() => {}}
+          onPress={() => router.push("/talk-ai")}
           activeOpacity={0.7}
         >
           <Text style={styles.aiButtonText}>✦ Talk AI</Text>

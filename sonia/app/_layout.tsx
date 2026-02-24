@@ -20,6 +20,7 @@ export default function RootLayout() {
           name="protected"
           options={{ gestureEnabled: false }}
         />
+        <Stack.Screen name="talk-ai" />
         <Stack.Screen
           name="add-command"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}
