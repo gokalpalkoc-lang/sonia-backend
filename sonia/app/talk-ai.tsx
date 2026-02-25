@@ -10,6 +10,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
+import { useCommands } from "@/context/commands-context";
+import { scheduleCommandReminder } from "@/lib/notifications";
+
 const MESSSIII_URL = "https://postomental-nathaly-spongingly.ngrok-free.dev";
 
 // JavaScript to inject into the WebView to capture console logs
@@ -22,21 +25,25 @@ const CONSOLE_INJECT_SCRIPT = `
       info: console.info,
     };
 
-    function sendMessage(type, args) {
+    function sendRaw(payload) {
       try {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: type,
-          message: args.map(arg => {
-            try {
-              return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-            } catch (e) {
-              return String(arg);
-            }
-          }).join(' ')
-        }));
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
       } catch (e) {
         // Ignore errors
       }
+    }
+
+    function sendMessage(type, args) {
+      sendRaw({
+        type: type,
+        message: args.map(arg => {
+          try {
+            return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+          } catch (e) {
+            return String(arg);
+          }
+        }).join(' ')
+      });
     }
 
     console.log = function(...args) {
@@ -59,6 +66,24 @@ const CONSOLE_INJECT_SCRIPT = `
       sendMessage('info', args);
     };
 
+    const originalFetch = window.fetch;
+    window.fetch = async function(input, init) {
+      const response = await originalFetch(input, init);
+      try {
+        const url = typeof input === 'string' ? input : input?.url;
+        const method = (init?.method || 'GET').toUpperCase();
+        if (url && method === 'POST' && url.includes('/api/commands') && init?.body) {
+          const payload = typeof init.body === 'string' ? JSON.parse(init.body) : null;
+          if (payload && payload.time && payload.prompt) {
+            sendRaw({ type: 'command-created', command: payload });
+          }
+        }
+      } catch (error) {
+        sendMessage('warn', ['Failed to inspect fetch payload', error]);
+      }
+      return response;
+    };
+
     window.onerror = function(message, source, lineno, colno, error) {
       sendMessage('error', [message + ' (line ' + lineno + ':' + colno + ')']);
     };
@@ -69,12 +94,30 @@ export default function TalkAIScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
+  const { addCommand } = useCommands();
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      const { type, message } = data;
-      
+      const { type, message, command } = data;
+
+      if (type === "command-created" && command?.time && command?.prompt) {
+        const incomingCommand = {
+          id: `${Date.now()}-${Math.random()}`,
+          assistantName: command.assistantName,
+          time: String(command.time),
+          prompt: String(command.prompt),
+          firstMessage: command.firstMessage ? String(command.firstMessage) : undefined,
+          expanded: false,
+        };
+
+        addCommand(incomingCommand);
+        scheduleCommandReminder(incomingCommand).catch((error) => {
+          console.error("Failed to schedule command reminder", error);
+        });
+        return;
+      }
+
       // Log to React Native console with appropriate prefix
       switch (type) {
         case 'error':
@@ -89,7 +132,7 @@ export default function TalkAIScreen() {
         default:
           console.log(`[WebView Log] ${message}`);
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
   };

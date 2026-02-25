@@ -14,7 +14,11 @@ export function CommandsProvider({ children }: { children: React.ReactNode }) {
   const [commands, setCommands] = useState<Command[]>([]);
 
   const addCommand = (cmd: Command) =>
-    setCommands((prev) => [...prev, cmd]);
+    setCommands((prev) => {
+      const key = cmd.id ?? `${cmd.time}-${cmd.prompt}`;
+      const exists = prev.some((item) => (item.id ?? `${item.time}-${item.prompt}`) === key);
+      return exists ? prev : [...prev, cmd];
+    });
 
   const deleteCommand = (index: number) =>
     setCommands((prev) => prev.filter((_, i) => i !== index));
