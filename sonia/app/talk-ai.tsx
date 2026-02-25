@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React, { useRef } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -95,6 +95,31 @@ export default function TalkAIScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
+  const { commandPayload, autoStart } = useLocalSearchParams<{ commandPayload?: string; autoStart?: string }>();
+
+  const autoStartScript = useMemo(() => {
+    if (!commandPayload || autoStart !== "1") {
+      return null;
+    }
+
+    try {
+      const decoded = decodeURIComponent(String(commandPayload));
+      return `
+        (function() {
+          try {
+            const payload = ${decoded};
+            window.__soniaAutoCallPayload = payload;
+            window.dispatchEvent(new CustomEvent('sonia:auto-call', { detail: payload }));
+          } catch (error) {
+            console.error('Failed to trigger sonia:auto-call', error);
+          }
+        })();
+        true;
+      `;
+    } catch {
+      return null;
+    }
+  }, [autoStart, commandPayload]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -118,15 +143,14 @@ export default function TalkAIScreen() {
         return;
       }
 
-      // Log to React Native console with appropriate prefix
       switch (type) {
-        case 'error':
+        case "error":
           console.warn(`[WebView Error] ${message}`);
           break;
-        case 'warn':
+        case "warn":
           console.warn(`[WebView Warn] ${message}`);
           break;
-        case 'info':
+        case "info":
           console.info(`[WebView Info] ${message}`);
           break;
         default:
@@ -139,7 +163,6 @@ export default function TalkAIScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -152,7 +175,6 @@ export default function TalkAIScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* WebView */}
       <WebView
         ref={webViewRef}
         source={{ uri: MESSSIII_URL }}
@@ -164,6 +186,11 @@ export default function TalkAIScreen() {
         startInLoadingState={true}
         injectedJavaScript={CONSOLE_INJECT_SCRIPT}
         onMessage={handleMessage}
+        onLoadEnd={() => {
+          if (autoStartScript) {
+            webViewRef.current?.injectJavaScript(autoStartScript);
+          }
+        }}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4F46E5" />

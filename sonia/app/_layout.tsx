@@ -15,16 +15,34 @@ function NavigationEffects() {
       console.warn("Notification init failed", error);
     });
 
-    const notificationSubscription = addNotificationTapListener(({ screen, commandText }) => {
+    const notificationSubscription = addNotificationTapListener(({ screen, commandText, commandPayload }) => {
       if (screen === "talk-ai") {
-        router.push({ pathname: "/talk-ai", params: commandText ? { commandText } : undefined });
+        router.push({
+          pathname: "/talk-ai",
+          params: {
+            ...(commandText ? { commandText } : {}),
+            ...(commandPayload ? { commandPayload } : {}),
+            autoStart: "1",
+          },
+        });
       }
     });
 
     const linkingSubscription = Linking.addEventListener("url", ({ url }) => {
       const parsed = Linking.parse(url);
       if (parsed.path === "talk-ai") {
-        router.push("/talk-ai");
+        const params = parsed.queryParams ?? {};
+        const commandPayload = typeof params.commandPayload === "string" ? params.commandPayload : undefined;
+        const commandText = typeof params.commandText === "string" ? params.commandText : undefined;
+
+        router.push({
+          pathname: "/talk-ai",
+          params: {
+            ...(commandText ? { commandText } : {}),
+            ...(commandPayload ? { commandPayload } : {}),
+            autoStart: "1",
+          },
+        });
       }
     });
 

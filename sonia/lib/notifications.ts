@@ -31,6 +31,12 @@ type NotificationModule = {
   }) => void) => { remove: () => void };
 };
 
+export interface NotificationTapPayload {
+  screen?: string;
+  commandText?: string;
+  commandPayload?: string;
+}
+
 let notifications: NotificationModule | null = null;
 
 try {
@@ -45,6 +51,17 @@ const inAppTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function hasNativeNotifications() {
   return Boolean(notifications);
+}
+
+export function encodeCommandPayload(command: Command) {
+  const payload = {
+    assistantName: command.assistantName ?? "",
+    time: command.time,
+    prompt: command.prompt,
+    firstMessage: command.firstMessage ?? "",
+  };
+
+  return encodeURIComponent(JSON.stringify(payload));
 }
 
 export async function initializeNotifications() {
@@ -93,6 +110,7 @@ function getNextTriggerDate(time: string) {
 export async function scheduleCommandReminder(command: Command) {
   const trigger = getNextTriggerDate(command.time);
   const commandText = command.prompt;
+  const commandPayload = encodeCommandPayload(command);
 
   if (notifications) {
     await notifications.scheduleNotificationAsync({
@@ -103,6 +121,7 @@ export async function scheduleCommandReminder(command: Command) {
         data: {
           screen: "talk-ai",
           commandText,
+          commandPayload,
         },
       },
       trigger: { type: "date", date: trigger },
@@ -121,7 +140,7 @@ export async function scheduleCommandReminder(command: Command) {
   inAppTimers.set(`${command.time}-${command.prompt}`, timer);
 }
 
-export function addNotificationTapListener(onTap: (payload: { screen?: string; commandText?: string }) => void) {
+export function addNotificationTapListener(onTap: (payload: NotificationTapPayload) => void) {
   if (!notifications?.addNotificationResponseReceivedListener) {
     return { remove: () => undefined };
   }
@@ -131,6 +150,7 @@ export function addNotificationTapListener(onTap: (payload: { screen?: string; c
     onTap({
       screen: typeof data.screen === "string" ? data.screen : undefined,
       commandText: typeof data.commandText === "string" ? data.commandText : undefined,
+      commandPayload: typeof data.commandPayload === "string" ? data.commandPayload : undefined,
     });
   });
 }
