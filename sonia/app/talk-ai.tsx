@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -13,7 +13,7 @@ import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useCommands } from "@/context/commands-context";
 import { scheduleCommandReminder } from "@/lib/notifications";
 
-const MESSSIII_URL = "https://postomental-nathaly-spongingly.ngrok-free.dev";
+const MESSSIII_URL = process.env.EXPO_PUBLIC_WEBSITE_URL!;
 
 // JavaScript to inject into the WebView to capture console logs
 const CONSOLE_INJECT_SCRIPT = `
@@ -95,7 +95,10 @@ export default function TalkAIScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
-  const { commandPayload, autoStart } = useLocalSearchParams<{ commandPayload?: string; autoStart?: string }>();
+  const { commandPayload, autoStart } = useLocalSearchParams<{
+    commandPayload?: string;
+    autoStart?: string;
+  }>();
 
   const autoStartScript = useMemo(() => {
     if (!commandPayload || autoStart !== "1") {
@@ -132,7 +135,9 @@ export default function TalkAIScreen() {
           assistantName: command.assistantName,
           time: String(command.time),
           prompt: String(command.prompt),
-          firstMessage: command.firstMessage ? String(command.firstMessage) : undefined,
+          firstMessage: command.firstMessage
+            ? String(command.firstMessage)
+            : undefined,
           expanded: false,
         };
 

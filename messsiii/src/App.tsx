@@ -1,8 +1,13 @@
-import Vapi from '@vapi-ai/web';
-import { useEffect, useRef, useState } from 'react';
-import './App.css';
-import AssistantCreator from './AssistantCreator';
-import { API_BASE_URL, ASSISTANT_ID, VAPI_API_KEY, VAPI_PUBLIC_KEY } from './config';
+import Vapi from "@vapi-ai/web";
+import { useEffect, useRef, useState } from "react";
+import "./App.css";
+import AssistantCreator from "./AssistantCreator";
+import {
+  API_BASE_URL,
+  ASSISTANT_ID,
+  VAPI_API_KEY,
+  VAPI_PUBLIC_KEY,
+} from "./config";
 
 interface Assistant {
   id: string;
@@ -33,29 +38,29 @@ declare global {
 
 function App() {
   const [isCallActive, setIsCallActive] = useState(false);
-  const [currentAssistantId, setCurrentAssistantId] = useState<string>(''); // Start empty, will be set after fetching assistants
+  const [currentAssistantId, setCurrentAssistantId] = useState<string>(""); // Start empty, will be set after fetching assistants
   const [showCreator, setShowCreator] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isLoadingAssistants, setIsLoadingAssistants] = useState(false);
-  const [assistantName, setAssistantName] = useState('');
+  const [assistantName, setAssistantName] = useState("");
   const [receivedCommands, setReceivedCommands] = useState<Command[]>([]);
   const vapiRef = useRef<Vapi | null>(null);
   const isVapiInitialized = useRef(false);
   const lastCommandCount = useRef(0);
-  
+
   // Initialize calledToday from localStorage or empty set
   const getInitialCalledToday = (): Set<string> => {
-    const today = new Date().toISOString().split('T')[0];
-    const storedDate = localStorage.getItem('callTrackingDate');
-    const storedCalls = localStorage.getItem('calledToday');
-    
+    const today = new Date().toISOString().split("T")[0];
+    const storedDate = localStorage.getItem("callTrackingDate");
+    const storedCalls = localStorage.getItem("calledToday");
+
     // If it's a new day, reset the tracking
     if (storedDate !== today) {
-      localStorage.setItem('callTrackingDate', today);
-      localStorage.setItem('calledToday', JSON.stringify([]));
+      localStorage.setItem("callTrackingDate", today);
+      localStorage.setItem("calledToday", JSON.stringify([]));
       return new Set();
     }
-    
+
     if (storedCalls) {
       try {
         return new Set(JSON.parse(storedCalls));
@@ -65,40 +70,46 @@ function App() {
     }
     return new Set();
   };
-  
+
   const calledTodayRef = useRef<Set<string>>(getInitialCalledToday());
   const receivedCommandsRef = useRef<Command[]>([]); // Keep track of latest commands
   const isCallActiveRef = useRef(isCallActive); // Keep track of call status
   const [refreshKey, setRefreshKey] = useState(0); // Force UI refresh
-  
+
   // Update refs when state changes
   useEffect(() => {
     receivedCommandsRef.current = receivedCommands;
   }, [receivedCommands]);
-  
+
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
   }, [isCallActive]);
 
-  const startCallForAssistant = async (assistantId: string, sourceLabel: string) => {
+  const startCallForAssistant = async (
+    assistantId: string,
+    sourceLabel: string,
+  ) => {
     if (isCallActiveRef.current) {
       console.log(`⏭️ Skipping ${sourceLabel} - call already in progress`);
       return;
     }
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const currentDate = new Date().toISOString().split("T")[0];
     calledTodayRef.current.add(assistantId);
-    localStorage.setItem('calledToday', JSON.stringify([...calledTodayRef.current]));
+    localStorage.setItem(
+      "calledToday",
+      JSON.stringify([...calledTodayRef.current]),
+    );
     setRefreshKey((k) => k + 1);
 
     try {
       await fetch(`${API_BASE_URL}/api/commands/called`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assistantId, date: currentDate }),
       });
     } catch (error) {
-      console.error('Failed to update last called date:', error);
+      console.error("Failed to update last called date:", error);
     }
 
     if (!vapiRef.current) return;
@@ -108,16 +119,16 @@ function App() {
       await vapiRef.current.start(assistantId);
       console.log(`📞 Started call from ${sourceLabel}`);
     } catch (error) {
-      console.error('Failed to start call:', error);
+      console.error("Failed to start call:", error);
     }
   };
 
   const startAutoCallFromPayload = async (detail: AutoCallEventDetail) => {
     const commands = receivedCommandsRef.current;
 
-    const normalizedPrompt = detail.prompt?.trim().toLowerCase() ?? '';
-    const normalizedName = detail.assistantName?.trim().toLowerCase() ?? '';
-    const normalizedTime = detail.time?.trim() ?? '';
+    const normalizedPrompt = detail.prompt?.trim().toLowerCase() ?? "";
+    const normalizedName = detail.assistantName?.trim().toLowerCase() ?? "";
+    const normalizedTime = detail.time?.trim() ?? "";
 
     const matchedCommand = commands.find((cmd) => {
       if (!cmd.assistantId) return false;
@@ -136,19 +147,24 @@ function App() {
     });
 
     if (!matchedCommand?.assistantId) {
-      console.warn('⚠️ Auto-call payload received, but no matching command with assistantId was found.', detail);
+      console.warn(
+        "⚠️ Auto-call payload received, but no matching command with assistantId was found.",
+        detail,
+      );
       return;
     }
 
-    await startCallForAssistant(matchedCommand.assistantId, 'notification payload');
+    await startCallForAssistant(
+      matchedCommand.assistantId,
+      "notification payload",
+    );
   };
 
-  
   // Function to manually check time and trigger calls
   const checkTimeNow = async () => {
     const now = new Date();
-    const currentHours = now.getHours().toString().padStart(2, '0');
-    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+    const currentHours = now.getHours().toString().padStart(2, "0");
+    const currentMinutes = now.getMinutes().toString().padStart(2, "0");
     const currentTime = `${currentHours}:${currentMinutes}`;
     console.log(`🔍 Manual time check: ${currentTime}`);
 
@@ -164,7 +180,10 @@ function App() {
         }
 
         console.log(`📞 Calling ${cmd.assistantName}!`);
-        await startCallForAssistant(cmd.assistantId, `manual time check (${cmd.assistantName})`);
+        await startCallForAssistant(
+          cmd.assistantId,
+          `manual time check (${cmd.assistantName})`,
+        );
       }
     }
   };
@@ -173,10 +192,10 @@ function App() {
   const fetchAssistants = async () => {
     setIsLoadingAssistants(true);
     try {
-      const response = await fetch('https://api.vapi.ai/assistant', {
-        method: 'GET',
+      const response = await fetch("https://api.vapi.ai/assistant", {
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${VAPI_API_KEY}`,
+          Authorization: `Bearer ${VAPI_API_KEY}`,
         },
       });
 
@@ -185,21 +204,25 @@ function App() {
         // Map the response to Assistant interface
         const assistantList: Assistant[] = data.map((assistant: any) => ({
           id: assistant.id,
-          name: assistant.name || 'Unnamed Assistant',
+          name: assistant.name || "Unnamed Assistant",
           createdAt: assistant.createdAt,
         }));
         setAssistants(assistantList);
-        
+
         // Set currentAssistantId to first available assistant if the default one doesn't exist
         if (assistantList.length > 0 && !currentAssistantId) {
-          const defaultExists = assistantList.some(a => a.id === ASSISTANT_ID);
-          setCurrentAssistantId(defaultExists ? ASSISTANT_ID : assistantList[0].id);
+          const defaultExists = assistantList.some(
+            (a) => a.id === ASSISTANT_ID,
+          );
+          setCurrentAssistantId(
+            defaultExists ? ASSISTANT_ID : assistantList[0].id,
+          );
         }
       } else {
-        console.error('Failed to fetch assistants:', response.status);
+        console.error("Failed to fetch assistants:", response.status);
       }
     } catch (error) {
-      console.error('Error fetching assistants:', error);
+      console.error("Error fetching assistants:", error);
     } finally {
       setIsLoadingAssistants(false);
     }
@@ -208,27 +231,33 @@ function App() {
   // Update assistant with first message (only if assistant exists)
   const updateAssistantFirstMessage = async (assistantId: string) => {
     try {
-      const response = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${VAPI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          firstMessage: 'Merhaba, nasılsın?',
-          model: {
-            maxTokens: 800,
+      const response = await fetch(
+        `https://api.vapi.ai/assistant/${assistantId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${VAPI_API_KEY}`,
           },
-        }),
-      });
+          body: JSON.stringify({
+            firstMessage: "Merhaba, nasılsın?",
+            model: {
+              maxTokens: 800,
+            },
+          }),
+        },
+      );
 
       if (response.ok) {
-        console.log('Assistant first message updated successfully');
+        console.log("Assistant first message updated successfully");
       } else {
-        console.error('Failed to update assistant first message:', response.status);
+        console.error(
+          "Failed to update assistant first message:",
+          response.status,
+        );
       }
     } catch (error) {
-      console.error('Error updating assistant first message:', error);
+      console.error("Error updating assistant first message:", error);
     }
   };
 
@@ -252,18 +281,18 @@ function App() {
     }
 
     // Vapi event listeners
-    vapi.on('call-start', () => {
-      console.log('Call started');
+    vapi.on("call-start", () => {
+      console.log("Call started");
       setIsCallActive(true);
     });
 
-    vapi.on('call-end', () => {
-      console.log('Call ended');
+    vapi.on("call-end", () => {
+      console.log("Call ended");
       setIsCallActive(false);
     });
 
-    vapi.on('error', (error: any) => {
-      console.error('Vapi error:', error);
+    vapi.on("error", (error: any) => {
+      console.error("Vapi error:", error);
       setIsCallActive(false);
     });
 
@@ -282,7 +311,11 @@ function App() {
         const response = await fetch(`${API_BASE_URL}/api/commands`);
         if (response.ok) {
           const data = await response.json();
-          if (data.commands && data.commands.length > lastCommandCount.current) {
+          console.log(data);
+          if (
+            data.commands &&
+            data.commands.length > lastCommandCount.current
+          ) {
             setReceivedCommands(data.commands);
             lastCommandCount.current = data.commands.length;
           }
@@ -302,8 +335,8 @@ function App() {
     const checkTimeAndCall = async () => {
       // Get current time in HH:MM format (local time)
       const now = new Date();
-      const currentHours = now.getHours().toString().padStart(2, '0');
-      const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+      const currentHours = now.getHours().toString().padStart(2, "0");
+      const currentMinutes = now.getMinutes().toString().padStart(2, "0");
       const currentTime = `${currentHours}:${currentMinutes}`;
       console.log(`⏰ Time check: ${currentTime}`);
 
@@ -316,28 +349,37 @@ function App() {
         if (cmd.time === currentTime && cmd.assistantId) {
           // Check if already called today
           if (calledTodayRef.current.has(cmd.assistantId)) {
-            console.log(`⏭️ Skipping ${cmd.assistantName} - already called today`);
+            console.log(
+              `⏭️ Skipping ${cmd.assistantName} - already called today`,
+            );
             continue;
           }
 
           // Check if call is already active to avoid duplicate calls
           if (callActive) {
-            console.log(`⏭️ Skipping ${cmd.assistantName} - call already in progress`);
+            console.log(
+              `⏭️ Skipping ${cmd.assistantName} - call already in progress`,
+            );
             continue;
           }
 
-          console.log(`📞 Starting automatic call for ${cmd.assistantName} at scheduled time ${cmd.time}!`);
-          await startCallForAssistant(cmd.assistantId, `scheduled command (${cmd.assistantName})`);
+          console.log(
+            `📞 Starting automatic call for ${cmd.assistantName} at scheduled time ${cmd.time}!`,
+          );
+          await startCallForAssistant(
+            cmd.assistantId,
+            `scheduled command (${cmd.assistantName})`,
+          );
         }
       }
     };
 
     // Check time every 30 seconds
     const timeInterval = setInterval(checkTimeAndCall, 30000);
-    
+
     // Also run immediately on mount
     checkTimeAndCall();
-    
+
     return () => clearInterval(timeInterval);
   }, []);
 
@@ -345,7 +387,7 @@ function App() {
   useEffect(() => {
     const midnightReset = () => {
       calledTodayRef.current.clear();
-      console.log('🔄 Reset daily call tracking at midnight');
+      console.log("🔄 Reset daily call tracking at midnight");
     };
 
     const now = new Date();
@@ -359,12 +401,12 @@ function App() {
 
     // Also check periodically if we've crossed midnight
     const dayCheckInterval = setInterval(() => {
-      const currentDate = new Date().toISOString().split('T')[0];
-      const lastCheckDate = localStorage.getItem('lastCallDate');
+      const currentDate = new Date().toISOString().split("T")[0];
+      const lastCheckDate = localStorage.getItem("lastCallDate");
       if (lastCheckDate && lastCheckDate !== currentDate) {
         calledTodayRef.current.clear();
-        localStorage.setItem('lastCallDate', currentDate);
-        console.log('🔄 Reset daily call tracking (date changed)');
+        localStorage.setItem("lastCallDate", currentDate);
+        console.log("🔄 Reset daily call tracking (date changed)");
       }
     }, 60000); // Check every minute
 
@@ -379,7 +421,7 @@ function App() {
       try {
         await vapiRef.current.start(currentAssistantId);
       } catch (error) {
-        console.error('Failed to start call:', error);
+        console.error("Failed to start call:", error);
       }
     }
   };
@@ -405,52 +447,55 @@ function App() {
     const handler = (event: Event) => {
       const custom = event as CustomEvent<AutoCallEventDetail>;
       startAutoCallFromPayload(custom.detail ?? {}).catch((error) => {
-        console.error('Failed to start auto-call from payload:', error);
+        console.error("Failed to start auto-call from payload:", error);
       });
     };
 
-    window.addEventListener('sonia:auto-call', handler as EventListener);
+    window.addEventListener("sonia:auto-call", handler as EventListener);
 
     if (window.__soniaAutoCallPayload) {
       startAutoCallFromPayload(window.__soniaAutoCallPayload).catch((error) => {
-        console.error('Failed to start auto-call from stored payload:', error);
+        console.error("Failed to start auto-call from stored payload:", error);
       });
       window.__soniaAutoCallPayload = undefined;
     }
 
     return () => {
-      window.removeEventListener('sonia:auto-call', handler as EventListener);
+      window.removeEventListener("sonia:auto-call", handler as EventListener);
     };
   }, []);
 
   const updateAssistantName = async () => {
     if (!assistantName.trim()) {
-      alert('Please enter an assistant name');
+      alert("Please enter an assistant name");
       return;
     }
 
     try {
-      const response = await fetch(`https://api.vapi.ai/assistant/${currentAssistantId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${VAPI_API_KEY}`,
+      const response = await fetch(
+        `https://api.vapi.ai/assistant/${currentAssistantId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${VAPI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            name: assistantName,
+          }),
         },
-        body: JSON.stringify({
-          name: assistantName,
-        }),
-      });
+      );
 
       if (response.ok) {
-        alert('Assistant name updated successfully!');
-        setAssistantName('');
+        alert("Assistant name updated successfully!");
+        setAssistantName("");
         fetchAssistants();
       } else {
-        alert('Failed to update assistant name');
+        alert("Failed to update assistant name");
       }
     } catch (error) {
-      console.error('Error updating assistant name:', error);
-      alert('Error updating assistant name');
+      console.error("Error updating assistant name:", error);
+      alert("Error updating assistant name");
     }
   };
 
@@ -458,11 +503,11 @@ function App() {
     <>
       <div className="header">
         <h1>Vapi Assistant</h1>
-        <button 
+        <button
           onClick={() => setShowCreator(!showCreator)}
           className="toggle-button"
         >
-          {showCreator ? 'Back to Call' : 'Create New Assistant'}
+          {showCreator ? "Back to Call" : "Create New Assistant"}
         </button>
       </div>
 
@@ -490,16 +535,16 @@ function App() {
             ) : (
               <p>No assistants found. Create one first!</p>
             )}
-            <button 
-              onClick={fetchAssistants} 
+            <button
+              onClick={fetchAssistants}
               className="refresh-button"
               disabled={isLoadingAssistants}
             >
-              {isLoadingAssistants ? 'Loading...' : 'Refresh List'}
+              {isLoadingAssistants ? "Loading..." : "Refresh List"}
             </button>
           </div>
 
-          <div className="form-group">
+          {/* <div className="form-group">
             <label htmlFor="assistantId">Or enter Assistant ID manually:</label>
             <input
               id="assistantId"
@@ -508,7 +553,7 @@ function App() {
               onChange={(e) => setCurrentAssistantId(e.target.value)}
               placeholder="Enter assistant ID"
             />
-          </div>
+          </div> */}
 
           <div className="form-group">
             <label htmlFor="newAssistantName">Update Assistant Name:</label>
@@ -519,25 +564,24 @@ function App() {
               onChange={(e) => setAssistantName(e.target.value)}
               placeholder="Enter new assistant name"
             />
-            <button 
-              onClick={updateAssistantName} 
-              className="update-button"
-            >
+            <button onClick={updateAssistantName} className="update-button">
               Update Name
             </button>
           </div>
 
           <div className="card">
             {!isCallActive ? (
-              <button onClick={startCall}>
-                Start Call
-              </button>
+              <button onClick={startCall}>Start Call</button>
             ) : (
-              <button onClick={endCall} style={{ backgroundColor: '#ff4444' }}>
+              <button onClick={endCall} style={{ backgroundColor: "#ff4444" }}>
                 End Call
               </button>
             )}
-            <p>{isCallActive ? 'Call is active...' : 'Click to start a call with your Vapi assistant'}</p>
+            <p>
+              {isCallActive
+                ? "Call is active..."
+                : "Click to start a call with your Vapi assistant"}
+            </p>
           </div>
 
           {/* Commands from Sonia */}
@@ -549,7 +593,9 @@ function App() {
               </button>
             </div>
             {receivedCommands.length === 0 ? (
-              <p className="no-commands">No commands received yet. Add a command in the Sonia app!</p>
+              <p className="no-commands">
+                No commands received yet. Add a command in the Sonia app!
+              </p>
             ) : (
               <div className="commands-list" key={refreshKey}>
                 {receivedCommands.map((cmd, index) => (
@@ -558,19 +604,29 @@ function App() {
                       <span className="command-name">{cmd.assistantName}</span>
                       <span className="command-time">{cmd.time}</span>
                     </div>
-                    <p className="command-prompt"><strong>System Prompt:</strong> {cmd.prompt}</p>
+                    <p className="command-prompt">
+                      <strong>System Prompt:</strong> {cmd.prompt}
+                    </p>
                     {cmd.firstMessage && (
-                      <p className="command-first-message"><strong>First Message:</strong> {cmd.firstMessage}</p>
+                      <p className="command-first-message">
+                        <strong>First Message:</strong> {cmd.firstMessage}
+                      </p>
                     )}
                     {cmd.assistantId && (
-                      <p className="command-id">Assistant ID: {cmd.assistantId}</p>
+                      <p className="command-id">
+                        Assistant ID: {cmd.assistantId}
+                      </p>
                     )}
                     {cmd.assistantId && (
                       <div className="command-auto-call">
                         {calledTodayRef.current.has(cmd.assistantId) ? (
-                          <span className="auto-call-status called">✓ Called today</span>
+                          <span className="auto-call-status called">
+                            ✓ Called today
+                          </span>
                         ) : (
-                          <span className="auto-call-status pending">⏰ Auto-call enabled</span>
+                          <span className="auto-call-status pending">
+                            ⏰ Auto-call enabled
+                          </span>
                         )}
                       </div>
                     )}
@@ -582,7 +638,7 @@ function App() {
         </div>
       )}
     </>
-  )
+  );
 }
 
-export default App
+export default App;

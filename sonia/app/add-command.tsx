@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -17,7 +17,7 @@ import { scheduleCommandReminder } from "@/lib/notifications";
 
 // Server URL for messsiii - change this to your computer's network IP
 // The phone needs to access the computer's IP, not localhost
-const MESSIII_SERVER_URL = "https://postomental-nathaly-spongingly.ngrok-free.dev";
+const MESSIII_SERVER_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
 export default function AddCommandScreen() {
   const router = useRouter();
@@ -36,16 +36,19 @@ export default function AddCommandScreen() {
       return;
     }
     if (!timeInput.trim() || !promptInput.trim() || !firstMessageInput.trim()) {
-      Alert.alert("Missing Fields", "Please enter time, prompt, and first message.");
+      Alert.alert(
+        "Missing Fields",
+        "Please enter time, prompt, and first message.",
+      );
       return;
     }
 
-    const newCommand = { 
+    const newCommand = {
       assistantName: assistantName.trim(),
-      time: timeInput.trim(), 
+      time: timeInput.trim(),
       prompt: promptInput.trim(),
       firstMessage: firstMessageInput.trim(),
-      expanded: false 
+      expanded: false,
     };
 
     // Add command locally first and schedule reminder
@@ -68,24 +71,24 @@ export default function AddCommandScreen() {
     setIsLoading(true);
     try {
       const response = await fetch(`${MESSIII_SERVER_URL}/api/commands`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(newCommand),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Command sent to messsiii successfully');
+        console.log("Command sent to messsiii successfully");
         if (data.assistantId) {
-          console.log('Created assistant ID:', data.assistantId);
+          console.log("Created assistant ID:", data.assistantId);
         }
       } else {
-        console.error('Failed to send command to messsiii:', response.status);
+        console.error("Failed to send command to messsiii:", response.status);
       }
     } catch (error) {
-      console.error('Error sending command to messsiii:', error);
+      console.error("Error sending command to messsiii:", error);
       // Don't show error to user, just log it - command was still added locally
     } finally {
       setIsLoading(false);
@@ -99,15 +102,13 @@ export default function AddCommandScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={[
-          styles.inner,
-          { paddingTop: insets.top + 24 },
-        ]}
+        contentContainerStyle={[styles.inner, { paddingTop: insets.top + 24 }]}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>New Command</Text>
         <Text style={styles.subtitle}>
-          Set an assistant name, time, system prompt, and first message for the command.
+          Set an assistant name, time, system prompt, and first message for the
+          command.
         </Text>
 
         {/* Assistant Name */}
@@ -157,13 +158,16 @@ export default function AddCommandScreen() {
         />
 
         <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isLoading && styles.submitButtonDisabled,
+          ]}
           onPress={handleAppend}
           activeOpacity={0.8}
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? 'Creating...' : 'Create Assistant'}
+            {isLoading ? "Creating..." : "Create Assistant"}
           </Text>
         </TouchableOpacity>
 
