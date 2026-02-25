@@ -18,6 +18,19 @@ interface Command {
   assistantId?: string;
 }
 
+interface AutoCallEventDetail {
+  assistantName?: string;
+  time?: string;
+  prompt?: string;
+  firstMessage?: string;
+}
+
+declare global {
+  interface Window {
+    __soniaAutoCallPayload?: AutoCallEventDetail;
+  }
+}
+
 function App() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [currentAssistantId, setCurrentAssistantId] = useState<string>(''); // Start empty, will be set after fetching assistants
@@ -66,6 +79,70 @@ function App() {
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
   }, [isCallActive]);
+
+  const startCallForAssistant = async (assistantId: string, sourceLabel: string) => {
+    if (isCallActiveRef.current) {
+      console.log(`⏭️ Skipping ${sourceLabel} - call already in progress`);
+      return;
+    }
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    calledTodayRef.current.add(assistantId);
+    localStorage.setItem('calledToday', JSON.stringify([...calledTodayRef.current]));
+    setRefreshKey((k) => k + 1);
+
+    try {
+      await fetch(`${API_BASE_URL}/api/commands/called`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assistantId, date: currentDate }),
+      });
+    } catch (error) {
+      console.error('Failed to update last called date:', error);
+    }
+
+    if (!vapiRef.current) return;
+
+    try {
+      setCurrentAssistantId(assistantId);
+      await vapiRef.current.start(assistantId);
+      console.log(`📞 Started call from ${sourceLabel}`);
+    } catch (error) {
+      console.error('Failed to start call:', error);
+    }
+  };
+
+  const startAutoCallFromPayload = async (detail: AutoCallEventDetail) => {
+    const commands = receivedCommandsRef.current;
+
+    const normalizedPrompt = detail.prompt?.trim().toLowerCase() ?? '';
+    const normalizedName = detail.assistantName?.trim().toLowerCase() ?? '';
+    const normalizedTime = detail.time?.trim() ?? '';
+
+    const matchedCommand = commands.find((cmd) => {
+      if (!cmd.assistantId) return false;
+
+      const promptMatch = normalizedPrompt
+        ? cmd.prompt.trim().toLowerCase() === normalizedPrompt
+        : true;
+      const nameMatch = normalizedName
+        ? cmd.assistantName.trim().toLowerCase() === normalizedName
+        : true;
+      const timeMatch = normalizedTime
+        ? cmd.time.trim() === normalizedTime
+        : true;
+
+      return promptMatch && nameMatch && timeMatch;
+    });
+
+    if (!matchedCommand?.assistantId) {
+      console.warn('⚠️ Auto-call payload received, but no matching command with assistantId was found.', detail);
+      return;
+    }
+
+    await startCallForAssistant(matchedCommand.assistantId, 'notification payload');
+  };
+
   
   // Function to manually check time and trigger calls
   const checkTimeNow = async () => {
@@ -73,9 +150,7 @@ function App() {
     const currentHours = now.getHours().toString().padStart(2, '0');
     const currentMinutes = now.getMinutes().toString().padStart(2, '0');
     const currentTime = `${currentHours}:${currentMinutes}`;
-    const currentDate = now.toISOString().split('T')[0];
-
-    console.log(`🔍 Manual time check: ${currentTime} (${currentDate})`);
+    console.log(`🔍 Manual time check: ${currentTime}`);
 
     for (const cmd of receivedCommands) {
       if (cmd.time === currentTime && cmd.assistantId) {
@@ -89,28 +164,7 @@ function App() {
         }
 
         console.log(`📞 Calling ${cmd.assistantName}!`);
-        calledTodayRef.current.add(cmd.assistantId);
-        localStorage.setItem('calledToday', JSON.stringify([...calledTodayRef.current]));
-        setRefreshKey(k => k + 1); // Force UI refresh
-
-        try {
-          await fetch(`${API_BASE_URL}/api/commands/called`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assistantId: cmd.assistantId, date: currentDate })
-          });
-        } catch (error) {
-          console.error('Failed to update last called date:', error);
-        }
-
-        if (vapiRef.current) {
-          try {
-            setCurrentAssistantId(cmd.assistantId);
-            await vapiRef.current.start(cmd.assistantId);
-          } catch (error) {
-            console.error('Failed to start call:', error);
-          }
-        }
+        await startCallForAssistant(cmd.assistantId, `manual time check (${cmd.assistantName})`);
       }
     }
   };
@@ -251,9 +305,7 @@ function App() {
       const currentHours = now.getHours().toString().padStart(2, '0');
       const currentMinutes = now.getMinutes().toString().padStart(2, '0');
       const currentTime = `${currentHours}:${currentMinutes}`;
-      const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-
-      console.log(`⏰ Time check: ${currentTime} (${currentDate})`);
+      console.log(`⏰ Time check: ${currentTime}`);
 
       // Use ref for latest commands and call status
       const commands = receivedCommandsRef.current;
@@ -275,31 +327,7 @@ function App() {
           }
 
           console.log(`📞 Starting automatic call for ${cmd.assistantName} at scheduled time ${cmd.time}!`);
-          
-          // Mark as called today
-          calledTodayRef.current.add(cmd.assistantId);
-          localStorage.setItem('calledToday', JSON.stringify([...calledTodayRef.current]));
-          
-          // Update last called date on server
-          try {
-            await fetch(`${API_BASE_URL}/api/commands/called`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ assistantId: cmd.assistantId, date: currentDate })
-            });
-          } catch (error) {
-            console.error('Failed to update last called date:', error);
-          }
-
-          // Start the call
-          if (vapiRef.current) {
-            try {
-              setCurrentAssistantId(cmd.assistantId);
-              await vapiRef.current.start(cmd.assistantId);
-            } catch (error) {
-              console.error('Failed to start scheduled call:', error);
-            }
-          }
+          await startCallForAssistant(cmd.assistantId, `scheduled command (${cmd.assistantName})`);
         }
       }
     };
@@ -372,6 +400,28 @@ function App() {
   const handleAssistantChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCurrentAssistantId(e.target.value);
   };
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<AutoCallEventDetail>;
+      startAutoCallFromPayload(custom.detail ?? {}).catch((error) => {
+        console.error('Failed to start auto-call from payload:', error);
+      });
+    };
+
+    window.addEventListener('sonia:auto-call', handler as EventListener);
+
+    if (window.__soniaAutoCallPayload) {
+      startAutoCallFromPayload(window.__soniaAutoCallPayload).catch((error) => {
+        console.error('Failed to start auto-call from stored payload:', error);
+      });
+      window.__soniaAutoCallPayload = undefined;
+    }
+
+    return () => {
+      window.removeEventListener('sonia:auto-call', handler as EventListener);
+    };
+  }, []);
 
   const updateAssistantName = async () => {
     if (!assistantName.trim()) {

@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCommands } from "@/context/commands-context";
+import { scheduleCommandReminder } from "@/lib/notifications";
 
 // Server URL for messsiii - change this to your computer's network IP
 // The phone needs to access the computer's IP, not localhost
@@ -47,8 +48,21 @@ export default function AddCommandScreen() {
       expanded: false 
     };
 
-    // Add command locally first
-    addCommand({ time: timeInput.trim(), prompt: promptInput.trim(), expanded: false });
+    // Add command locally first and schedule reminder
+    const localCommand = {
+      id: `${Date.now()}`,
+      assistantName: assistantName.trim(),
+      time: timeInput.trim(),
+      prompt: promptInput.trim(),
+      firstMessage: firstMessageInput.trim(),
+      expanded: false,
+    };
+    addCommand(localCommand);
+    try {
+      await scheduleCommandReminder(localCommand);
+    } catch (error) {
+      console.error("Failed to schedule reminder", error);
+    }
 
     // Send command to messsiii server
     setIsLoading(true);
