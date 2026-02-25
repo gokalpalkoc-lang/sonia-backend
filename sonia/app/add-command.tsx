@@ -16,7 +16,7 @@ import { useCommands } from "@/context/commands-context";
 
 // Server URL for messsiii - change this to your computer's network IP
 // The phone needs to access the computer's IP, not localhost
-const MESSIII_SERVER_URL = "http://10.10.1.189:8000";
+const MESSIII_SERVER_URL = "https://postomental-nathaly-spongingly.ngrok-free.dev";
 
 export default function AddCommandScreen() {
   const router = useRouter();

@@ -20,7 +20,7 @@ interface Command {
 
 function App() {
   const [isCallActive, setIsCallActive] = useState(false);
-  const [currentAssistantId, setCurrentAssistantId] = useState(ASSISTANT_ID);
+  const [currentAssistantId, setCurrentAssistantId] = useState<string>(''); // Start empty, will be set after fetching assistants
   const [showCreator, setShowCreator] = useState(false);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isLoadingAssistants, setIsLoadingAssistants] = useState(false);
@@ -135,6 +135,12 @@ function App() {
           createdAt: assistant.createdAt,
         }));
         setAssistants(assistantList);
+        
+        // Set currentAssistantId to first available assistant if the default one doesn't exist
+        if (assistantList.length > 0 && !currentAssistantId) {
+          const defaultExists = assistantList.some(a => a.id === ASSISTANT_ID);
+          setCurrentAssistantId(defaultExists ? ASSISTANT_ID : assistantList[0].id);
+        }
       } else {
         console.error('Failed to fetch assistants:', response.status);
       }
@@ -145,10 +151,10 @@ function App() {
     }
   };
 
-  // Update assistant with first message
-  const updateAssistantFirstMessage = async () => {
+  // Update assistant with first message (only if assistant exists)
+  const updateAssistantFirstMessage = async (assistantId: string) => {
     try {
-      const response = await fetch(`https://api.vapi.ai/assistant/${ASSISTANT_ID}`, {
+      const response = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -186,8 +192,10 @@ function App() {
     // Fetch assistants on mount
     fetchAssistants();
 
-    // Update assistant with first message
-    updateAssistantFirstMessage();
+    // Update assistant with first message if we have a valid assistant ID
+    if (currentAssistantId) {
+      updateAssistantFirstMessage(currentAssistantId);
+    }
 
     // Vapi event listeners
     vapi.on('call-start', () => {
