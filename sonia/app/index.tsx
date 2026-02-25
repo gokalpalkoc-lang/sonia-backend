@@ -1,7 +1,8 @@
 import { useAudioPlayer } from "expo-audio";
-import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { Redirect, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Image,
   StyleSheet,
@@ -10,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { isVoiceSetupDone } from "@/lib/storage";
 
 import pic3 from "../assets/images/gojo.jpg";
 import pic2 from "../assets/images/keddy.png";
@@ -28,6 +31,12 @@ const ITEMS = [
 export default function CarouselScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Check if voice setup has been completed
+  const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
+  useEffect(() => {
+    isVoiceSetupDone().then(setVoiceReady);
+  }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const player = useAudioPlayer(ITEMS[currentIndex].sound);
@@ -62,7 +71,8 @@ export default function CarouselScreen() {
       useNativeDriver: true,
     }).start(() => {
       setCurrentIndex((prev) => {
-        if (direction === "right") return prev === ITEMS.length - 1 ? 0 : prev + 1;
+        if (direction === "right")
+          return prev === ITEMS.length - 1 ? 0 : prev + 1;
         return prev === 0 ? ITEMS.length - 1 : prev - 1;
       });
       // Fade in
@@ -73,6 +83,25 @@ export default function CarouselScreen() {
       }).start();
     });
   };
+
+  // Show loading while checking voice setup status
+  if (voiceReady === null) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { alignItems: "center", justifyContent: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  // Redirect to voice setup if not completed
+  if (!voiceReady) {
+    return <Redirect href={"/voice-setup" as const} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -123,9 +152,7 @@ export default function CarouselScreen() {
             />
             {/* Overlay label */}
             <View style={styles.imageOverlay}>
-              <Text style={styles.imageLabel}>
-                {ITEMS[currentIndex].label}
-              </Text>
+              <Text style={styles.imageLabel}>{ITEMS[currentIndex].label}</Text>
               <Text style={styles.tapHint}>Tap to play sound</Text>
             </View>
           </Animated.View>
@@ -145,10 +172,7 @@ export default function CarouselScreen() {
         {ITEMS.map((_, i) => (
           <View
             key={i}
-            style={[
-              styles.dot,
-              i === currentIndex && styles.dotActive,
-            ]}
+            style={[styles.dot, i === currentIndex && styles.dotActive]}
           />
         ))}
       </View>

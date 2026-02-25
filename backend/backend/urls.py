@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/commands', views.commands, name='commands'),
     path('api/commands/called', views.update_called, name='update_called'),
     path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
+    path('api/voice-clone', views.voice_clone, name='voice_clone'),
 ]

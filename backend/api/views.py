@@ -1,18 +1,21 @@
 import json
 import logging
+import os
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
+from elevenlabs.client import ElevenLabs
+from io import BytesIO
 
 from .models import Command, AssistantCall
 
 # Vapi API configuration
 VAPI_API_KEY = "475a65ff-0aa5-4dac-b9f2-52a16f2c7bba"
-ELEVENLABS_VOICE_ID = "Mh8FUpRrhM4iDFS1KYre"
+ELEVENLABS_VOICE_ID = "Mh8FUpRrhM4iDFS1KYre"  # Default fallback voice
+ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_API_KEY_HERE"  # TODO: Replace with your ElevenLabs API key
 
 logger = logging.getLogger(__name__)
-
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
@@ -43,6 +46,7 @@ def commands(request):
             time = data.get('time')
             prompt = data.get('prompt')
             first_message = data.get('firstMessage')
+            voice_id = data.get('voiceId') or ELEVENLABS_VOICE_ID  # Use cloned voice or fallback
             
             logger.info(f'Command received from Sonia:')
             logger.info(f'   Assistant Name: {assistant_name}')
@@ -70,7 +74,7 @@ def commands(request):
                         },
                         'voice': {
                             'provider': '11labs',
-                            'voiceId': ELEVENLABS_VOICE_ID,
+                            'voiceId': voice_id,
                         },
                         'transcriber': {
                             'provider': '11labs',
@@ -147,3 +151,37 @@ def get_last_called(request, assistant_id):
         return JsonResponse({'lastCalledDate': last_called})
     except AssistantCall.DoesNotExist:
         return JsonResponse({'lastCalledDate': None})
+
+
+elevenlabs = ElevenLabs(
+  api_key=  ELEVENLABS_API_KEY
+)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def voice_clone(request):
+    """Receive an audio file and clone the voice via ElevenLabs API"""
+    try:
+        audio_file = request.FILES.get('audio')
+        if not audio_file:
+            return JsonResponse({'success': False, 'error': 'No audio file provided'}, status=400)
+
+        name = request.POST.get('name', 'Sonia User Voice')
+
+        logger.info(f'Voice clone request received: {audio_file.name} ({audio_file.size} bytes)')
+        
+        voice = elevenlabs.voices.ivc.create(
+            name=name,
+            files=[BytesIO(audio_file.read())]
+        )
+        if hasattr(voice, 'voice_id'):
+            logger.info(f'Voice cloned successfully: {voice.voice_id}')
+            return JsonResponse({'success': True, 'voiceId': voice.voice_id})
+        else:
+            logger.error(f'Unexpected response from ElevenLabs: {voice}')
+            return JsonResponse({'success': False, 'error': 'Failed to clone voice'}, status=422)
+
+    
+    except Exception as e:
+        logger.error(f'Error cloning voice: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

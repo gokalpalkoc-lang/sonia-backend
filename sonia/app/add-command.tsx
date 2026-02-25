@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCommands } from "@/context/commands-context";
 import { scheduleCommandReminder } from "@/lib/notifications";
+import { getVoiceId } from "@/lib/storage";
 
 // Server URL for messsiii - change this to your computer's network IP
 // The phone needs to access the computer's IP, not localhost
@@ -70,12 +71,16 @@ export default function AddCommandScreen() {
     // Send command to messsiii server
     setIsLoading(true);
     try {
+      // Include cloned voice ID if available
+      const voiceId = await getVoiceId();
+      const payload = voiceId ? { ...newCommand, voiceId } : newCommand;
+
       const response = await fetch(`${MESSIII_SERVER_URL}/api/commands`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newCommand),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {

@@ -13,3 +13,4 @@ build/
 .DS_Store
 venv/
 *.sqlite3
+.vscode/
