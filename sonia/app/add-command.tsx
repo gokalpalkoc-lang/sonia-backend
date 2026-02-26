@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCommands } from "@/context/commands-context";
 import { scheduleCommandReminder } from "@/lib/notifications";
 import { getVoiceId } from "@/lib/storage";
+import type { Command } from "@/types/command";
 
 // Server URL for messsiii - change this to your computer's network IP
 // The phone needs to access the computer's IP, not localhost
@@ -52,23 +53,7 @@ export default function AddCommandScreen() {
       expanded: false,
     };
 
-    // Add command locally first and schedule reminder
-    const localCommand = {
-      id: `${Date.now()}`,
-      assistantName: assistantName.trim(),
-      time: timeInput.trim(),
-      prompt: promptInput.trim(),
-      firstMessage: firstMessageInput.trim(),
-      expanded: false,
-    };
-    addCommand(localCommand);
-    try {
-      await scheduleCommandReminder(localCommand);
-    } catch (error) {
-      console.error("Failed to schedule reminder", error);
-    }
-
-    // Send command to messsiii server
+    // Send command to backend server first to get the assistantId
     setIsLoading(true);
     try {
       // Include cloned voice ID if available
@@ -83,18 +68,46 @@ export default function AddCommandScreen() {
         body: JSON.stringify(payload),
       });
 
+      let assistantId: string | undefined;
       if (response.ok) {
         const data = await response.json();
+        assistantId = data.assistantId ?? undefined;
         console.log("Command sent to messsiii successfully");
-        if (data.assistantId) {
-          console.log("Created assistant ID:", data.assistantId);
+        if (assistantId) {
+          console.log("Created assistant ID:", assistantId);
         }
       } else {
         console.error("Failed to send command to messsiii:", response.status);
       }
+
+      // Add command locally with the assistantId and schedule reminder
+      const localCommand: Command = {
+        id: `${Date.now()}`,
+        assistantName: assistantName.trim(),
+        time: timeInput.trim(),
+        prompt: promptInput.trim(),
+        firstMessage: firstMessageInput.trim(),
+        assistantId,
+        expanded: false,
+      };
+      addCommand(localCommand);
+      try {
+        await scheduleCommandReminder(localCommand);
+      } catch (error) {
+        console.error("Failed to schedule reminder", error);
+      }
     } catch (error) {
       console.error("Error sending command to messsiii:", error);
-      // Don't show error to user, just log it - command was still added locally
+      // Still add command locally without assistantId
+      const localCommand: Command = {
+        id: `${Date.now()}`,
+        assistantName: assistantName.trim(),
+        time: timeInput.trim(),
+        prompt: promptInput.trim(),
+        firstMessage: firstMessageInput.trim(),
+        expanded: false,
+      };
+      addCommand(localCommand);
     } finally {
       setIsLoading(false);
       router.back();

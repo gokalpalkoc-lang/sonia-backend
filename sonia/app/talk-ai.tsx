@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -97,34 +97,10 @@ export default function TalkAIScreen() {
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
   const [webUri, setWebUri] = React.useState(MESSSIII_URL);
-  const { commandPayload, autoStart } = useLocalSearchParams<{
-    commandPayload?: string;
+  const { assistantId, autoStart } = useLocalSearchParams<{
+    assistantId?: string;
     autoStart?: string;
   }>();
-
-  const autoStartScript = useMemo(() => {
-    if (!commandPayload || autoStart !== "1") {
-      return null;
-    }
-
-    try {
-      const decoded = decodeURIComponent(String(commandPayload));
-      return `
-        (function() {
-          try {
-            const payload = ${decoded};
-            window.__soniaAutoCallPayload = payload;
-            window.dispatchEvent(new CustomEvent('sonia:auto-call', { detail: payload }));
-          } catch (error) {
-            console.error('Failed to trigger sonia:auto-call', error);
-          }
-        })();
-        true;
-      `;
-    } catch {
-      return null;
-    }
-  }, [autoStart, commandPayload]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -132,16 +108,18 @@ export default function TalkAIScreen() {
     const setWebViewUrl = async () => {
       try {
         const voiceId = await getVoiceId();
-        if (!isMounted || !voiceId?.trim()) {
-          return;
-        }
+        if (!isMounted) return;
 
-        const separator = MESSSIII_URL.includes("?") ? "&" : "?";
-        setWebUri(
-          `${MESSSIII_URL}${separator}voiceId=${encodeURIComponent(voiceId)}`,
-        );
+        const url = new URL(MESSSIII_URL);
+        if (voiceId?.trim()) {
+          url.searchParams.set("voiceId", voiceId);
+        }
+        if (autoStart === "1" && assistantId?.trim()) {
+          url.searchParams.set("start_assistant_id", assistantId.trim());
+        }
+        setWebUri(url.toString());
       } catch (error) {
-        console.warn("Failed to read local voice ID for webview params", error);
+        console.warn("Failed to build webview URL", error);
       }
     };
 
@@ -150,7 +128,7 @@ export default function TalkAIScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [autoStart, assistantId]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -219,11 +197,6 @@ export default function TalkAIScreen() {
         startInLoadingState={true}
         injectedJavaScript={CONSOLE_INJECT_SCRIPT}
         onMessage={handleMessage}
-        onLoadEnd={() => {
-          if (autoStartScript) {
-            webViewRef.current?.injectJavaScript(autoStartScript);
-          }
-        }}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4F46E5" />

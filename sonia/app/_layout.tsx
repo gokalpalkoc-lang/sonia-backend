@@ -1,4 +1,5 @@
 import * as Linking from "expo-linking";
+import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -16,14 +17,16 @@ function NavigationEffects() {
   const router = useRouter();
 
   useEffect(() => {
-    const openTalkAi = ({ screen, commandText, commandPayload }: NotificationPayload) => {
+    const openTalkAi = ({
+      screen,
+      assistantId,
+    }: NotificationPayload) => {
       if (screen !== "talk-ai") return;
 
       router.push({
         pathname: "/talk-ai",
         params: {
-          ...(commandText ? { commandText } : {}),
-          ...(commandPayload ? { commandPayload } : {}),
+          ...(assistantId ? { assistantId } : {}),
           autoStart: "1",
         },
       });
@@ -33,6 +36,19 @@ function NavigationEffects() {
       console.warn("Notification init failed", error);
     });
 
+    // Handle cold-start: if the app was killed and user tapped a notification,
+    // the tap listener won't fire. Check for the last notification response.
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        const data = response.notification.request.content.data ?? {};
+        openTalkAi({
+          screen: typeof data.screen === "string" ? data.screen : undefined,
+          assistantId:
+            typeof data.assistantId === "string" ? data.assistantId : undefined,
+        });
+      }
+    });
+
     const notificationTapSubscription = addNotificationTapListener(openTalkAi);
     const notificationReceivedSubscription = addNotificationReceivedListener(openTalkAi);
 
@@ -40,20 +56,15 @@ function NavigationEffects() {
       const parsed = Linking.parse(url);
       if (parsed.path === "talk-ai") {
         const params = parsed.queryParams ?? {};
-        const commandPayload =
-          typeof params.commandPayload === "string"
-            ? params.commandPayload
+        const assistantId =
+          typeof params.assistantId === "string"
+            ? params.assistantId
             : undefined;
-        const commandText =
-          typeof params.commandText === "string"
-            ? params.commandText
-            : undefined;
-
+            
         router.push({
           pathname: "/talk-ai",
           params: {
-            ...(commandText ? { commandText } : {}),
-            ...(commandPayload ? { commandPayload } : {}),
+            ...(assistantId ? { assistantId } : {}),
             autoStart: "1",
           },
         });

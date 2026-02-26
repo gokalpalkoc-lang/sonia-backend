@@ -5,28 +5,20 @@ import type { Command } from "@/types/command";
 export interface NotificationPayload {
   screen?: string;
   commandText?: string;
-  commandPayload?: string;
+  assistantId?: string;
 }
 
 function toNotificationPayload(data: Record<string, unknown>) {
   return {
     screen: typeof data.screen === "string" ? data.screen : undefined,
-    commandText: typeof data.commandText === "string" ? data.commandText : undefined,
-    commandPayload:
-      typeof data.commandPayload === "string" ? data.commandPayload : undefined,
+    commandText:
+      typeof data.commandText === "string" ? data.commandText : undefined,
+    assistantId:
+      typeof data.assistantId === "string" ? data.assistantId : undefined,
   } satisfies NotificationPayload;
 }
 
-export function encodeCommandPayload(command: Command) {
-  const payload = {
-    assistantName: command.assistantName ?? "",
-    time: command.time,
-    prompt: command.prompt,
-    firstMessage: command.firstMessage ?? "",
-  };
 
-  return encodeURIComponent(JSON.stringify(payload));
-}
 
 export async function initializeNotifications() {
   Notifications.setNotificationHandler({
@@ -72,7 +64,6 @@ function getNextTriggerDate(time: string) {
 export async function scheduleCommandReminder(command: Command) {
   const trigger = getNextTriggerDate(command.time);
   const commandText = command.prompt;
-  const commandPayload = encodeCommandPayload(command);
 
   await Notifications.scheduleNotificationAsync({
     content: {
@@ -82,10 +73,13 @@ export async function scheduleCommandReminder(command: Command) {
       data: {
         screen: "talk-ai",
         commandText,
-        commandPayload,
+        assistantId: command.assistantId ?? "",
       },
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: trigger,
+    },
   });
 }
 
@@ -98,7 +92,9 @@ export function addNotificationReceivedListener(
   });
 }
 
-export function addNotificationTapListener(onTap: (payload: NotificationPayload) => void) {
+export function addNotificationTapListener(
+  onTap: (payload: NotificationPayload) => void,
+) {
   return Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data ?? {};
     onTap(toNotificationPayload(data));

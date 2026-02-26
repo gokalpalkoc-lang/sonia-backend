@@ -23,19 +23,6 @@ interface Command {
   assistantId?: string;
 }
 
-interface AutoCallEventDetail {
-  assistantName?: string;
-  time?: string;
-  prompt?: string;
-  firstMessage?: string;
-}
-
-declare global {
-  interface Window {
-    __soniaAutoCallPayload?: AutoCallEventDetail;
-  }
-}
-
 function App() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [currentAssistantId, setCurrentAssistantId] = useState<string>(""); // Start empty, will be set after fetching assistants
@@ -43,10 +30,10 @@ function App() {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [isLoadingAssistants, setIsLoadingAssistants] = useState(false);
   const [assistantName, setAssistantName] = useState("");
-  const [receivedCommands, setReceivedCommands] = useState<Command[]>([]);
+  // const [receivedCommands, setReceivedCommands] = useState<Command[]>([]);
   const vapiRef = useRef<Vapi | null>(null);
   const isVapiInitialized = useRef(false);
-  const lastCommandCount = useRef(0);
+  // const lastCommandCount = useRef(0);
 
   // Initialize calledToday from localStorage or empty set
   const getInitialCalledToday = (): Set<string> => {
@@ -72,14 +59,13 @@ function App() {
   };
 
   const calledTodayRef = useRef<Set<string>>(getInitialCalledToday());
-  const receivedCommandsRef = useRef<Command[]>([]); // Keep track of latest commands
   const isCallActiveRef = useRef(isCallActive); // Keep track of call status
   const [refreshKey, setRefreshKey] = useState(0); // Force UI refresh
 
   // Update refs when state changes
-  useEffect(() => {
-    receivedCommandsRef.current = receivedCommands;
-  }, [receivedCommands]);
+  // useEffect(() => {
+  //   receivedCommandsRef.current = receivedCommands;
+  // }, [receivedCommands]);
 
   useEffect(() => {
     isCallActiveRef.current = isCallActive;
@@ -123,70 +109,33 @@ function App() {
     }
   };
 
-  const startAutoCallFromPayload = async (detail: AutoCallEventDetail) => {
-    const commands = receivedCommandsRef.current;
-
-    const normalizedPrompt = detail.prompt?.trim().toLowerCase() ?? "";
-    const normalizedName = detail.assistantName?.trim().toLowerCase() ?? "";
-    const normalizedTime = detail.time?.trim() ?? "";
-
-    const matchedCommand = commands.find((cmd) => {
-      if (!cmd.assistantId) return false;
-
-      const promptMatch = normalizedPrompt
-        ? cmd.prompt.trim().toLowerCase() === normalizedPrompt
-        : true;
-      const nameMatch = normalizedName
-        ? cmd.assistantName.trim().toLowerCase() === normalizedName
-        : true;
-      const timeMatch = normalizedTime
-        ? cmd.time.trim() === normalizedTime
-        : true;
-
-      return promptMatch && nameMatch && timeMatch;
-    });
-
-    if (!matchedCommand?.assistantId) {
-      console.warn(
-        "⚠️ Auto-call payload received, but no matching command with assistantId was found.",
-        detail,
-      );
-      return;
-    }
-
-    await startCallForAssistant(
-      matchedCommand.assistantId,
-      "notification payload",
-    );
-  };
-
   // Function to manually check time and trigger calls
-  const checkTimeNow = async () => {
-    const now = new Date();
-    const currentHours = now.getHours().toString().padStart(2, "0");
-    const currentMinutes = now.getMinutes().toString().padStart(2, "0");
-    const currentTime = `${currentHours}:${currentMinutes}`;
-    console.log(`🔍 Manual time check: ${currentTime}`);
+  // const checkTimeNow = async () => {
+  //   const now = new Date();
+  //   const currentHours = now.getHours().toString().padStart(2, "0");
+  //   const currentMinutes = now.getMinutes().toString().padStart(2, "0");
+  //   const currentTime = `${currentHours}:${currentMinutes}`;
+  //   console.log(`🔍 Manual time check: ${currentTime}`);
 
-    for (const cmd of receivedCommands) {
-      if (cmd.time === currentTime && cmd.assistantId) {
-        if (calledTodayRef.current.has(cmd.assistantId)) {
-          console.log(`⏭️ ${cmd.assistantName} - already called today`);
-          continue;
-        }
-        if (isCallActive) {
-          console.log(`⏭️ ${cmd.assistantName} - call in progress`);
-          continue;
-        }
+  //   for (const cmd of receivedCommands) {
+  //     if (cmd.time === currentTime && cmd.assistantId) {
+  //       if (calledTodayRef.current.has(cmd.assistantId)) {
+  //         console.log(`⏭️ ${cmd.assistantName} - already called today`);
+  //         continue;
+  //       }
+  //       if (isCallActive) {
+  //         console.log(`⏭️ ${cmd.assistantName} - call in progress`);
+  //         continue;
+  //       }
 
-        console.log(`📞 Calling ${cmd.assistantName}!`);
-        await startCallForAssistant(
-          cmd.assistantId,
-          `manual time check (${cmd.assistantName})`,
-        );
-      }
-    }
-  };
+  //       console.log(`📞 Calling ${cmd.assistantName}!`);
+  //       await startCallForAssistant(
+  //         cmd.assistantId,
+  //         `manual time check (${cmd.assistantName})`,
+  //       );
+  //     }
+  //   }
+  // };
 
   // Fetch all assistants from VAPI
   const fetchAssistants = async () => {
@@ -304,84 +253,84 @@ function App() {
     };
   }, []);
 
-  // Poll for commands from the API
-  useEffect(() => {
-    const pollCommands = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/commands`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log(data);
-          if (
-            data.commands &&
-            data.commands.length > lastCommandCount.current
-          ) {
-            setReceivedCommands(data.commands);
-            lastCommandCount.current = data.commands.length;
-          }
-        }
-      } catch (error) {
-        // Silently ignore polling errors
-      }
-    };
+  // // Poll for commands from the API
+  // useEffect(() => {
+  //   const pollCommands = async () => {
+  //     try {
+  //       const response = await fetch(`${API_BASE_URL}/api/commands`);
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         console.log(data);
+  //         if (
+  //           data.commands &&
+  //           data.commands.length > lastCommandCount.current
+  //         ) {
+  //           setReceivedCommands(data.commands);
+  //           lastCommandCount.current = data.commands.length;
+  //         }
+  //       }
+  //     } catch (error) {
+  //       // Silently ignore polling errors
+  //     }
+  //   };
 
-    // Poll every 2 seconds
-    const interval = setInterval(pollCommands, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  //   // Poll every 2 seconds
+  //   const interval = setInterval(pollCommands, 2000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Check time and trigger automatic calls
-  useEffect(() => {
-    const checkTimeAndCall = async () => {
-      // Get current time in HH:MM format (local time)
-      const now = new Date();
-      const currentHours = now.getHours().toString().padStart(2, "0");
-      const currentMinutes = now.getMinutes().toString().padStart(2, "0");
-      const currentTime = `${currentHours}:${currentMinutes}`;
-      console.log(`⏰ Time check: ${currentTime}`);
+  // useEffect(() => {
+  //   const checkTimeAndCall = async () => {
+  //     // Get current time in HH:MM format (local time)
+  //     const now = new Date();
+  //     const currentHours = now.getHours().toString().padStart(2, "0");
+  //     const currentMinutes = now.getMinutes().toString().padStart(2, "0");
+  //     const currentTime = `${currentHours}:${currentMinutes}`;
+  //     console.log(`⏰ Time check: ${currentTime}`);
 
-      // Use ref for latest commands and call status
-      const commands = receivedCommandsRef.current;
-      const callActive = isCallActiveRef.current;
+  //     // Use ref for latest commands and call status
+  //     const commands = receivedCommandsRef.current;
+  //     const callActive = isCallActiveRef.current;
 
-      // Check each command for time match
-      for (const cmd of commands) {
-        if (cmd.time === currentTime && cmd.assistantId) {
-          // Check if already called today
-          if (calledTodayRef.current.has(cmd.assistantId)) {
-            console.log(
-              `⏭️ Skipping ${cmd.assistantName} - already called today`,
-            );
-            continue;
-          }
+  //     // Check each command for time match
+  //     for (const cmd of commands) {
+  //       if (cmd.time === currentTime && cmd.assistantId) {
+  //         // Check if already called today
+  //         if (calledTodayRef.current.has(cmd.assistantId)) {
+  //           console.log(
+  //             `⏭️ Skipping ${cmd.assistantName} - already called today`,
+  //           );
+  //           continue;
+  //         }
 
-          // Check if call is already active to avoid duplicate calls
-          if (callActive) {
-            console.log(
-              `⏭️ Skipping ${cmd.assistantName} - call already in progress`,
-            );
-            continue;
-          }
+  //         // Check if call is already active to avoid duplicate calls
+  //         if (callActive) {
+  //           console.log(
+  //             `⏭️ Skipping ${cmd.assistantName} - call already in progress`,
+  //           );
+  //           continue;
+  //         }
 
-          console.log(
-            `📞 Starting automatic call for ${cmd.assistantName} at scheduled time ${cmd.time}!`,
-          );
-          await startCallForAssistant(
-            cmd.assistantId,
-            `scheduled command (${cmd.assistantName})`,
-          );
-        }
-      }
-    };
+  //         console.log(
+  //           `📞 Starting automatic call for ${cmd.assistantName} at scheduled time ${cmd.time}!`,
+  //         );
+  //         await startCallForAssistant(
+  //           cmd.assistantId,
+  //           `scheduled command (${cmd.assistantName})`,
+  //         );
+  //       }
+  //     }
+  //   };
 
-    // Check time every 30 seconds
-    const timeInterval = setInterval(checkTimeAndCall, 30000);
+  //   // Check time every 30 seconds
+  //   const timeInterval = setInterval(checkTimeAndCall, 30000);
 
-    // Also run immediately on mount
-    checkTimeAndCall();
+  //   // Also run immediately on mount
+  //   checkTimeAndCall();
 
-    return () => clearInterval(timeInterval);
-  }, []);
+  //   return () => clearInterval(timeInterval);
+  // }, []);
 
   // Reset calledToday at midnight
   useEffect(() => {
@@ -444,28 +393,6 @@ function App() {
   };
 
   useEffect(() => {
-    const handler = (event: Event) => {
-      const custom = event as CustomEvent<AutoCallEventDetail>;
-      startAutoCallFromPayload(custom.detail ?? {}).catch((error) => {
-        console.error("Failed to start auto-call from payload:", error);
-      });
-    };
-
-    window.addEventListener("sonia:auto-call", handler as EventListener);
-
-    if (window.__soniaAutoCallPayload) {
-      startAutoCallFromPayload(window.__soniaAutoCallPayload).catch((error) => {
-        console.error("Failed to start auto-call from stored payload:", error);
-      });
-      window.__soniaAutoCallPayload = undefined;
-    }
-
-    return () => {
-      window.removeEventListener("sonia:auto-call", handler as EventListener);
-    };
-  }, []);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const startAssistantId = params.get("start_assistant_id")?.trim();
 
@@ -473,11 +400,12 @@ function App() {
       return;
     }
 
-    startCallForAssistant(startAssistantId, "start_assistant_id query param").catch(
-      (error) => {
-        console.error("Failed to start call from start_assistant_id:", error);
-      },
-    );
+    startCallForAssistant(
+      startAssistantId,
+      "start_assistant_id query param",
+    ).catch((error) => {
+      console.error("Failed to start call from start_assistant_id:", error);
+    });
   }, []);
 
   const updateAssistantName = async () => {
@@ -601,7 +529,7 @@ function App() {
           </div>
 
           {/* Commands from Sonia */}
-          <div className="commands-section">
+          {/*<div className="commands-section">
             <div className="commands-header">
               <h2>📱 Commands from Sonia</h2>
               <button onClick={checkTimeNow} className="check-time-button">
@@ -650,7 +578,7 @@ function App() {
                 ))}
               </div>
             )}
-          </div>
+          </div>*/}
         </div>
       )}
     </>

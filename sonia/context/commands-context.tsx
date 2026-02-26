@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 
 interface CommandsContextType {
   commands: Command[];
+  setCommands: React.Dispatch<React.SetStateAction<Command[]>>;
   addCommand: (cmd: Command) => void;
   deleteCommand: (index: number) => void;
   toggleExpand: (index: number) => void;
@@ -32,7 +33,7 @@ export function CommandsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CommandsContext.Provider
-      value={{ commands, addCommand, deleteCommand, toggleExpand }}
+      value={{ commands, setCommands, addCommand, deleteCommand, toggleExpand }}
     >
       {children}
     </CommandsContext.Provider>

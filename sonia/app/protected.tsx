@@ -14,7 +14,21 @@ import { useCommands } from "@/context/commands-context";
 export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { commands, deleteCommand, toggleExpand } = useCommands();
+  const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
+
+  // Fetch commands from backend on mount 
+  React.useEffect(() => {
+    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/commands`)
+      .then((res) => res.json())
+      .then((data) => {
+        setCommands(data.commands ?? []);
+        console.log("Fetched commands from backend:", data.commands);
+      })
+      .catch((error) => {
+        console.error("Error fetching commands:", error);
+      });
+  }, []);
+
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
