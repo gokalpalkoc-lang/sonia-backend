@@ -8,12 +8,14 @@ from django.utils.decorators import method_decorator
 from elevenlabs.client import ElevenLabs
 from io import BytesIO
 
+from elevenlabs.core import RequestOptions
+
 from .models import Command, AssistantCall
 
 # Vapi API configuration
 VAPI_API_KEY = "475a65ff-0aa5-4dac-b9f2-52a16f2c7bba"
 ELEVENLABS_VOICE_ID = "Mh8FUpRrhM4iDFS1KYre"  # Default fallback voice
-ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_API_KEY_HERE"  # TODO: Replace with your ElevenLabs API key
+ELEVENLABS_API_KEY = "069214e1931c84b9c4d46715216d5d3cf5c49427c7c7c3b2b6fc865a29c53eeb"  # TODO: Replace with your ElevenLabs API key
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +174,9 @@ def voice_clone(request):
         
         voice = elevenlabs.voices.ivc.create(
             name=name,
-            files=[BytesIO(audio_file.read())]
+            files=[BytesIO(audio_file.read())],
+            request_options=RequestOptions(language_code="tr")
+            
         )
         if hasattr(voice, 'voice_id'):
             logger.info(f'Voice cloned successfully: {voice.voice_id}')

@@ -35,7 +35,7 @@ export default function CarouselScreen() {
   // Check if voice setup has been completed
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   useEffect(() => {
-    isVoiceSetupDone().then(setVoiceReady);
+    isVoiceSetupDone().then((c)=>setVoiceReady(c));
   }, []);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -98,6 +98,7 @@ export default function CarouselScreen() {
     );
   }
 
+  console.log(voiceReady)
   // Redirect to voice setup if not completed
   if (!voiceReady) {
     return <Redirect href={"/voice-setup" as const} />;

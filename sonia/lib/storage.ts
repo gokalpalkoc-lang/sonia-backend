@@ -52,5 +52,6 @@ export async function setVoiceId(voiceId: string): Promise<void> {
 /** Check if voice setup (recording + cloning) has been completed */
 export async function isVoiceSetupDone(): Promise<boolean> {
   const value = await getItem(VOICE_SETUP_DONE_KEY);
+  console.log(await getItem(VOICE_ID_KEY))
   return value === "true";
 }
