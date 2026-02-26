@@ -19,6 +19,9 @@ ELEVENLABS_API_KEY = "069214e1931c84b9c4d46715216d5d3cf5c49427c7c7c3b2b6fc865a29
 
 logger = logging.getLogger(__name__)
 
+with open("api/master_prompt.txt", "r", encoding="utf-8") as f:
+    MASTER_PROMPT = f.read()
+
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def commands(request):
@@ -70,8 +73,8 @@ def commands(request):
                         'name': assistant_name,
                         'model': {
                             'provider': 'openai',
-                            'model': 'gpt-5-mini',
-                            'systemPrompt': prompt,
+                            'model': 'gpt-5.2-instant',
+                            'systemPrompt': f"{MASTER_PROMPT}\n\n{prompt}",
                             'maxTokens': 800,
                         },
                         'voice': {
