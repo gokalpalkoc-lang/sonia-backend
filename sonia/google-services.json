@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "410856879014",
+    "project_id": "sonia-e699a",
+    "storage_bucket": "sonia-e699a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410856879014:android:b9ccf97e1145e82fa6d567",
+        "android_client_info": {
+          "package_name": "com.bilisimcevre.sony"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBn3TS6RX0Yx-bSpaI0OLFPmducqSgW8Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

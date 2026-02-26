@@ -22,3 +22,12 @@ class AssistantCall(models.Model):
 
     def __str__(self):
         return f"{self.assistant_id} - {self.last_called_date}"
+
+
+class PushToken(models.Model):
+    """Stores Expo push tokens for registered devices"""
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.token

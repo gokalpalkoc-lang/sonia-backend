@@ -10,6 +10,7 @@ import {
   addNotificationReceivedListener,
   addNotificationTapListener,
   initializeNotifications,
+  registerForPushNotifications,
   type NotificationPayload,
 } from "@/lib/notifications";
 
@@ -34,6 +35,11 @@ function NavigationEffects() {
 
     initializeNotifications().catch((error) => {
       console.warn("Notification init failed", error);
+    });
+
+    // Register device for remote push notifications
+    registerForPushNotifications().catch((error) => {
+      console.warn("Push token registration failed", error);
     });
 
     // Handle cold-start: if the app was killed and user tapped a notification,

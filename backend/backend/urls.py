@@ -24,4 +24,6 @@ urlpatterns = [
     path('api/commands/called', views.update_called, name='update_called'),
     path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
     path('api/voice-clone', views.voice_clone, name='voice_clone'),
+    path('api/register-push-token', views.register_push_token, name='register_push_token'),
+    path('api/send-push', views.send_push_notification, name='send_push_notification'),
 ]

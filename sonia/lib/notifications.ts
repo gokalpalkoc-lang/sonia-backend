@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 
 import type { Command } from "@/types/command";
 
@@ -16,6 +17,34 @@ function toNotificationPayload(data: Record<string, unknown>) {
     assistantId:
       typeof data.assistantId === "string" ? data.assistantId : undefined,
   } satisfies NotificationPayload;
+}
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
+
+/**
+ * Register the device's Expo push token with the backend so it can
+ * receive server-initiated push notifications.
+ */
+export async function registerForPushNotifications() {
+  const { granted } = await Notifications.requestPermissionsAsync();
+  if (!granted) return null;
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+  const tokenData = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId } : undefined,
+  );
+
+  try {
+    await fetch(`${BACKEND_URL}/api/register-push-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: tokenData.data }),
+    });
+  } catch (error) {
+    console.warn("Failed to register push token with backend", error);
+  }
+
+  return tokenData.data;
 }
 
 

@@ -162,6 +162,79 @@ elevenlabs = ElevenLabs(
   api_key=  ELEVENLABS_API_KEY
 )
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def register_push_token(request):
+    """Register an Expo push token for the device"""
+    try:
+        data = json.loads(request.body)
+        token = data.get('token')
+        if not token:
+            return JsonResponse({'success': False, 'error': 'Missing token'}, status=400)
+
+        from .models import PushToken
+        PushToken.objects.update_or_create(token=token)
+        logger.info(f'Registered push token: {token}')
+        return JsonResponse({'success': True})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f'Error registering push token: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def send_push_notification(request):
+    """Send an Expo push notification to all registered devices"""
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', 'Sonia')
+        body = data.get('body', '')
+        extra_data = data.get('data', {"screen": "talk-ai"})
+
+        from .models import PushToken
+        tokens = list(PushToken.objects.values_list('token', flat=True))
+
+        if not tokens:
+            return JsonResponse({'success': False, 'error': 'No registered devices'}, status=404)
+
+        messages = [
+            {
+                'to': token,
+                'title': title,
+                'body': body,
+                'sound': 'default',
+                'data': extra_data,
+            }
+            for token in tokens
+        ]
+
+        import requests as http_requests
+        response = http_requests.post(
+            'https://exp.host/--/api/v2/push/send',
+            json=messages,
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate',
+            },
+            timeout=30,
+        )
+
+        logger.info(f'Push sent to {len(tokens)} device(s): {response.status_code}')
+        return JsonResponse({
+            'success': True,
+            'devicesNotified': len(tokens),
+            'expoResponse': response.json(),
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f'Error sending push notification: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def voice_clone(request):
