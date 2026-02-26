@@ -15,6 +15,8 @@ import { setVoiceId } from "@/lib/storage";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 const RECORD_DURATION = 30; // seconds
+const URI_WAIT_TIMEOUT_MS = 2500;
+const URI_POLL_INTERVAL_MS = 100;
 
 type Phase = "idle" | "recording" | "uploading" | "done";
 
@@ -26,6 +28,7 @@ export default function VoiceSetupScreen() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(RECORD_DURATION);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopAndUploadRef = useRef<() => Promise<void>>(async () => {});
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -33,6 +36,19 @@ export default function VoiceSetupScreen() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  const waitForRecordingUri = useCallback(async () => {
+    const deadline = Date.now() + URI_WAIT_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      if (recorder.uri) {
+        return recorder.uri;
+      }
+      await new Promise((resolve) => setTimeout(resolve, URI_POLL_INTERVAL_MS));
+    }
+
+    return recorder.uri;
+  }, [recorder]);
 
   const startRecording = useCallback(async () => {
     // Request microphone permission
@@ -45,11 +61,17 @@ export default function VoiceSetupScreen() {
       return;
     }
 
-    setPhase("recording");
-    setCountdown(RECORD_DURATION);
-
-    // Start recording
-    recorder.record();
+    try {
+      setCountdown(RECORD_DURATION);
+      await recorder.prepareToRecordAsync();
+      await recorder.record();
+      setPhase("recording");
+    } catch (error) {
+      console.error("Recording start failed:", error);
+      Alert.alert("Error", "Could not start recording. Please try again.");
+      setPhase("idle");
+      return;
+    }
 
     // 30-second countdown
     let remaining = RECORD_DURATION;
@@ -59,7 +81,7 @@ export default function VoiceSetupScreen() {
       if (remaining <= 0) {
         if (timerRef.current) clearInterval(timerRef.current);
         timerRef.current = null;
-        stopAndUpload();
+        void stopAndUploadRef.current();
       }
     }, 1000);
   }, [recorder]);
@@ -71,10 +93,17 @@ export default function VoiceSetupScreen() {
     }
 
     // Stop recording
-    await recorder.stop();
+    try {
+      await recorder.stop();
+    } catch (error) {
+      console.error("Recording stop failed:", error);
+      Alert.alert("Error", "Could not finish recording. Please try again.");
+      setPhase("idle");
+      return;
+    }
     setPhase("uploading");
 
-    const uri = recorder.uri;
+    const uri = await waitForRecordingUri();
     if (!uri) {
       Alert.alert("Error", "Recording failed — no audio file was produced.");
       setPhase("idle");
@@ -122,7 +151,10 @@ export default function VoiceSetupScreen() {
       );
       setPhase("idle");
     }
-  }, [recorder, router]);
+  }, [recorder, router, waitForRecordingUri]);
+  useEffect(() => {
+    stopAndUploadRef.current = stopAndUpload;
+  }, [stopAndUpload]);
 
   // Progress ratio for the circular indicator
   const progress = 1 - countdown / RECORD_DURATION;
