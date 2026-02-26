@@ -465,6 +465,21 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const startAssistantId = params.get("start_assistant_id")?.trim();
+
+    if (!startAssistantId) {
+      return;
+    }
+
+    startCallForAssistant(startAssistantId, "start_assistant_id query param").catch(
+      (error) => {
+        console.error("Failed to start call from start_assistant_id:", error);
+      },
+    );
+  }, []);
+
   const updateAssistantName = async () => {
     if (!assistantName.trim()) {
       alert("Please enter an assistant name");
@@ -506,6 +521,7 @@ function App() {
         <button
           onClick={() => setShowCreator(!showCreator)}
           className="toggle-button"
+          style={{ display: "none" }}
         >
           {showCreator ? "Back to Call" : "Create New Assistant"}
         </button>
