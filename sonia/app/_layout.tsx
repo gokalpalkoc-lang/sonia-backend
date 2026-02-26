@@ -6,33 +6,35 @@ import "react-native-reanimated";
 
 import { CommandsProvider } from "@/context/commands-context";
 import {
+  addNotificationReceivedListener,
   addNotificationTapListener,
-  hasNativeNotifications,
   initializeNotifications,
+  type NotificationPayload,
 } from "@/lib/notifications";
 
 function NavigationEffects() {
   const router = useRouter();
 
   useEffect(() => {
+    const openTalkAi = ({ screen, commandText, commandPayload }: NotificationPayload) => {
+      if (screen !== "talk-ai") return;
+
+      router.push({
+        pathname: "/talk-ai",
+        params: {
+          ...(commandText ? { commandText } : {}),
+          ...(commandPayload ? { commandPayload } : {}),
+          autoStart: "1",
+        },
+      });
+    };
+
     initializeNotifications().catch((error) => {
       console.warn("Notification init failed", error);
     });
 
-    const notificationSubscription = addNotificationTapListener(
-      ({ screen, commandText, commandPayload }) => {
-        if (screen === "talk-ai") {
-          router.push({
-            pathname: "/talk-ai",
-            params: {
-              ...(commandText ? { commandText } : {}),
-              ...(commandPayload ? { commandPayload } : {}),
-              autoStart: "1",
-            },
-          });
-        }
-      },
-    );
+    const notificationTapSubscription = addNotificationTapListener(openTalkAi);
+    const notificationReceivedSubscription = addNotificationReceivedListener(openTalkAi);
 
     const linkingSubscription = Linking.addEventListener("url", ({ url }) => {
       const parsed = Linking.parse(url);
@@ -59,18 +61,11 @@ function NavigationEffects() {
     });
 
     return () => {
-      notificationSubscription.remove();
+      notificationTapSubscription.remove();
+      notificationReceivedSubscription.remove();
       linkingSubscription.remove();
     };
   }, [router]);
-
-  useEffect(() => {
-    if (!hasNativeNotifications()) {
-      console.info(
-        "expo-notifications is not installed. Falling back to in-app reminders only.",
-      );
-    }
-  }, []);
 
   return null;
 }

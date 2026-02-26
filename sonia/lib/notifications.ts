@@ -1,56 +1,20 @@
-import { Alert, AppState } from "react-native";
+import * as Notifications from "expo-notifications";
 
 import type { Command } from "@/types/command";
 
-type NotificationModule = {
-  AndroidImportance?: { HIGH: number };
-  setNotificationHandler?: (handler: {
-    handleNotification: () => Promise<{
-      shouldShowAlert: boolean;
-      shouldPlaySound: boolean;
-      shouldSetBadge: boolean;
-      shouldShowBanner?: boolean;
-      shouldShowList?: boolean;
-    }>;
-  }) => void;
-  requestPermissionsAsync: () => Promise<{ granted: boolean }>;
-  setNotificationChannelAsync?: (channelId: string, config: Record<string, unknown>) => Promise<void>;
-  scheduleNotificationAsync: (request: {
-    content: {
-      title: string;
-      body: string;
-      data?: Record<string, unknown>;
-      sound?: boolean;
-    };
-    trigger: { type: "date"; date: Date };
-  }) => Promise<string>;
-  addNotificationResponseReceivedListener?: (listener: (response: {
-    notification: {
-      request: { content: { data?: Record<string, unknown> } };
-    };
-  }) => void) => { remove: () => void };
-};
-
-export interface NotificationTapPayload {
+export interface NotificationPayload {
   screen?: string;
   commandText?: string;
   commandPayload?: string;
 }
 
-let notifications: NotificationModule | null = null;
-
-try {
-  // Optional dependency: keeps app functional if expo-notifications cannot be installed.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  notifications = require("expo-notifications");
-} catch {
-  notifications = null;
-}
-
-const inAppTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-export function hasNativeNotifications() {
-  return Boolean(notifications);
+function toNotificationPayload(data: Record<string, unknown>) {
+  return {
+    screen: typeof data.screen === "string" ? data.screen : undefined,
+    commandText: typeof data.commandText === "string" ? data.commandText : undefined,
+    commandPayload:
+      typeof data.commandPayload === "string" ? data.commandPayload : undefined,
+  } satisfies NotificationPayload;
 }
 
 export function encodeCommandPayload(command: Command) {
@@ -65,9 +29,7 @@ export function encodeCommandPayload(command: Command) {
 }
 
 export async function initializeNotifications() {
-  if (!notifications) return;
-
-  notifications.setNotificationHandler?.({
+  Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
       shouldPlaySound: true,
@@ -77,12 +39,12 @@ export async function initializeNotifications() {
     }),
   });
 
-  const { granted } = await notifications.requestPermissionsAsync();
+  const { granted } = await Notifications.requestPermissionsAsync();
   if (!granted) return;
 
-  await notifications.setNotificationChannelAsync?.("commands", {
+  await Notifications.setNotificationChannelAsync("commands", {
     name: "Command Reminders",
-    importance: notifications.AndroidImportance?.HIGH ?? 4,
+    importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
   });
 }
@@ -112,45 +74,33 @@ export async function scheduleCommandReminder(command: Command) {
   const commandText = command.prompt;
   const commandPayload = encodeCommandPayload(command);
 
-  if (notifications) {
-    await notifications.scheduleNotificationAsync({
-      content: {
-        title: "Sonia Command Reminder",
-        body: commandText,
-        sound: true,
-        data: {
-          screen: "talk-ai",
-          commandText,
-          commandPayload,
-        },
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Sonia Command Reminder",
+      body: commandText,
+      sound: true,
+      data: {
+        screen: "talk-ai",
+        commandText,
+        commandPayload,
       },
-      trigger: { type: "date", date: trigger },
-    });
-    return;
-  }
-
-  const ms = trigger.getTime() - Date.now();
-  if (ms <= 0) return;
-
-  const timer = setTimeout(() => {
-    if (AppState.currentState !== "active") return;
-    Alert.alert("Sonia Command Reminder", commandText);
-  }, ms);
-
-  inAppTimers.set(`${command.time}-${command.prompt}`, timer);
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger },
+  });
 }
 
-export function addNotificationTapListener(onTap: (payload: NotificationTapPayload) => void) {
-  if (!notifications?.addNotificationResponseReceivedListener) {
-    return { remove: () => undefined };
-  }
+export function addNotificationReceivedListener(
+  onReceive: (payload: NotificationPayload) => void,
+) {
+  return Notifications.addNotificationReceivedListener((notification) => {
+    const data = notification.request.content.data ?? {};
+    onReceive(toNotificationPayload(data));
+  });
+}
 
-  return notifications.addNotificationResponseReceivedListener((response) => {
+export function addNotificationTapListener(onTap: (payload: NotificationPayload) => void) {
+  return Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data ?? {};
-    onTap({
-      screen: typeof data.screen === "string" ? data.screen : undefined,
-      commandText: typeof data.commandText === "string" ? data.commandText : undefined,
-      commandPayload: typeof data.commandPayload === "string" ? data.commandPayload : undefined,
-    });
+    onTap(toNotificationPayload(data));
   });
 }
