@@ -12,6 +12,7 @@ import { WebView, WebViewMessageEvent } from "react-native-webview";
 
 import { useCommands } from "@/context/commands-context";
 import { scheduleCommandReminder } from "@/lib/notifications";
+import { getVoiceId } from "@/lib/storage";
 
 const MESSSIII_URL = process.env.EXPO_PUBLIC_WEBSITE_URL!;
 
@@ -95,6 +96,7 @@ export default function TalkAIScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
+  const [webUri, setWebUri] = React.useState(MESSSIII_URL);
   const { commandPayload, autoStart } = useLocalSearchParams<{
     commandPayload?: string;
     autoStart?: string;
@@ -123,6 +125,32 @@ export default function TalkAIScreen() {
       return null;
     }
   }, [autoStart, commandPayload]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const setWebViewUrl = async () => {
+      try {
+        const voiceId = await getVoiceId();
+        if (!isMounted || !voiceId?.trim()) {
+          return;
+        }
+
+        const separator = MESSSIII_URL.includes("?") ? "&" : "?";
+        setWebUri(
+          `${MESSSIII_URL}${separator}voiceId=${encodeURIComponent(voiceId)}`,
+        );
+      } catch (error) {
+        console.warn("Failed to read local voice ID for webview params", error);
+      }
+    };
+
+    setWebViewUrl();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -182,7 +210,7 @@ export default function TalkAIScreen() {
 
       <WebView
         ref={webViewRef}
-        source={{ uri: MESSSIII_URL }}
+        source={{ uri: webUri }}
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}

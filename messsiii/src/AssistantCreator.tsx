@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DEFAULT_MODEL, VAPI_API_KEY } from './config';
 
 interface AssistantCreatorProps {
@@ -7,11 +7,21 @@ interface AssistantCreatorProps {
 
 function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
   const [prompt, setPrompt] = useState('');
-  const [elevenLabsVoiceId, setElevenLabsVoiceId] = useState('');
+  const [manualVoiceId, setManualVoiceId] = useState('');
   const [assistantName, setAssistantName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdAssistantId, setCreatedAssistantId] = useState('');
+
+  const elevenLabsVoiceId = useMemo(() => {
+    const voiceIdFromUrl = new URLSearchParams(window.location.search).get('voiceId');
+    if (voiceIdFromUrl?.trim()) {
+      return voiceIdFromUrl.trim();
+    }
+
+    return manualVoiceId.trim();
+  }, [manualVoiceId]);
+
 
   const createAssistant = async () => {
     if (!prompt.trim()) {
@@ -19,8 +29,8 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
       return;
     }
 
-    if (!elevenLabsVoiceId.trim()) {
-      setError('Please enter an ElevenLabs voice ID');
+    if (!elevenLabsVoiceId) {
+      setError('No voice ID found. Please complete voice setup in the mobile app.');
       return;
     }
 
@@ -107,14 +117,14 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
       </div>
 
       <div className="form-group">
-        <label htmlFor="voiceId">ElevenLabs Voice ID:</label>
+        <label htmlFor="voiceId">ElevenLabs Voice ID (from mobile app):</label>
         <input
           id="voiceId"
           type="text"
           value={elevenLabsVoiceId}
-          onChange={(e) => setElevenLabsVoiceId(e.target.value)}
-          placeholder="Enter your ElevenLabs voice ID (e.g., rachel, adam, etc.)"
-          disabled={isLoading}
+          onChange={(e) => setManualVoiceId(e.target.value)}
+          placeholder="Voice ID is passed from Sonia mobile app webview"
+          disabled={isLoading || Boolean(new URLSearchParams(window.location.search).get('voiceId')?.trim())}
         />
       </div>
 
