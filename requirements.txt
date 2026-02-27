@@ -1,5 +1,6 @@
 elevenlabs
-dotenv
+python-dotenv
 Django
 djangorestframework
 django-cors-headers
+daphne
