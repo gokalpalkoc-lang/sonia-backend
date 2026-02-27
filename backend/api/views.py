@@ -73,13 +73,14 @@ def commands(request):
                         'name': assistant_name,
                         'model': {
                             'provider': 'openai',
-                            'model': 'gpt-5.2-instant',
+                            'model': 'gpt-5-nano',
                             'systemPrompt': f"{MASTER_PROMPT}\n\n{prompt}",
                             'maxTokens': 800,
                         },
                         'voice': {
                             'provider': '11labs',
                             'voiceId': voice_id,
+                            'language':"tr"
                         },
                         'transcriber': {
                             'provider': '11labs',
@@ -95,8 +96,8 @@ def commands(request):
                     assistant_id = assistant_data.get('id')
                     logger.info(f'Created new assistant: {assistant_id}')
                 else:
-                    logger.error(f'Failed to create assistant: {create_assistant_response.status}')
-                    logger.error(f'Response: {create_assistant_response.text}')
+                    # logger.error(f'Failed to create assistant: {create_assistant_response.status}')
+                    logger.error(f'Response: {create_assistant_response}')
             except Exception as e:
                 logger.error(f'Error creating assistant: {e}')
             
@@ -115,10 +116,10 @@ def commands(request):
                 'assistantId': assistant_id
             })
         except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON'})
         except Exception as e:
             logger.error(f'Error parsing command: {e}')
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+            return JsonResponse({'success': False, 'error': str(e)})
 
 
 @csrf_exempt
@@ -251,7 +252,7 @@ def voice_clone(request):
         voice = elevenlabs.voices.ivc.create(
             name=name,
             files=[BytesIO(audio_file.read())],
-            request_options=RequestOptions(language_code="tr")
+            request_options={"language":"tr"}
             
         )
         if hasattr(voice, 'voice_id'):

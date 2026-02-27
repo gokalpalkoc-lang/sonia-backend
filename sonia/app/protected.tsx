@@ -9,19 +9,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useKomutlar } from "@/context/commands-context";
+import { useCommands } from "@/context/commands-context";
 
 export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { commands, deleteCommand, toggleExpand, setKomutlar } = useKomutlar();
+  const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
 
   // Fetch commands from backend on mount 
   React.useEffect(() => {
     fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/commands`)
       .then((res) => res.json())
       .then((data) => {
-        setKomutlar(data.commands ?? []);
+        setCommands(data.commands ?? []);
         console.log("Fetched commands from backend:", data.commands);
       })
       .catch((error) => {
