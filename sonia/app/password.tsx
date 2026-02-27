@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PASSWORD = "1234";
 
-export default function ŞifreScreen() {
+export default function PasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [passwordInput, setPasswordInput] = useState("");
