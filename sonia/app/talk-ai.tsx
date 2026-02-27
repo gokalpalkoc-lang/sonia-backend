@@ -1,7 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { AudioModule } from "expo-audio";
 import React, { useRef } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -97,10 +100,32 @@ export default function TalkAIScreen() {
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
   const [webUri, setWebUri] = React.useState(MESSSIII_URL);
+  const [hasMicPermission, setHasMicPermission] = React.useState<boolean | null>(null);
+
+  const requestMicPermission = React.useCallback(async () => {
+    try {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      setHasMicPermission(status.granted);
+
+      if (!status.granted) {
+        Alert.alert(
+          "Mikrofon İzni Gerekli",
+          "Yapay zekâ ile sesli konuşabilmek için mikrofon erişimine izin vermelisiniz.",
+        );
+      }
+    } catch (error) {
+      console.error("Failed to request microphone permission", error);
+      setHasMicPermission(false);
+    }
+  }, []);
   const { assistantId, autoStart } = useLocalSearchParams<{
     assistantId?: string;
     autoStart?: string;
   }>();
+
+  React.useEffect(() => {
+    requestMicPermission();
+  }, [requestMicPermission]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -186,24 +211,43 @@ export default function TalkAIScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <WebView
-        ref={webViewRef}
-        source={{ uri: webUri }}
-        style={styles.webview}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        mediaPlaybackRequiresUserAction={false}
-        allowsInlineMediaPlayback={true}
-        startInLoadingState={true}
-        injectedJavaScript={CONSOLE_INJECT_SCRIPT}
-        onMessage={handleMessage}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.loadingText}>Yapay zekâ ekranı yükleniyor...</Text>
-          </View>
-        )}
-      />
+      {hasMicPermission ? (
+        <WebView
+          ref={webViewRef}
+          source={{ uri: webUri }}
+          style={styles.webview}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          mediaPlaybackRequiresUserAction={false}
+          allowsInlineMediaPlayback={true}
+          startInLoadingState={true}
+          injectedJavaScript={CONSOLE_INJECT_SCRIPT}
+          mediaCapturePermissionGrantType={
+            Platform.OS === "android" ? "grantIfSameHostElsePrompt" : undefined
+          }
+          onMessage={handleMessage}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.loadingText}>Yapay zekâ ekranı yükleniyor...</Text>
+            </View>
+          )}
+        />
+      ) : (
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionTitle}>Mikrofon izni bekleniyor</Text>
+          <Text style={styles.permissionText}>
+            Yapay zekâ ile konuşmak için mikrofon erişimi zorunludur.
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionButton}
+            onPress={requestMicPermission}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.permissionButtonText}>Mikrofon İznini Ver</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -256,5 +300,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginTop: 12,
     fontSize: 16,
+  },
+  permissionContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  permissionTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  permissionText: {
+    color: "rgba(255,255,255,0.85)",
+    textAlign: "center",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  permissionButton: {
+    marginTop: 8,
+    backgroundColor: "#4F46E5",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  permissionButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
   },
 });
