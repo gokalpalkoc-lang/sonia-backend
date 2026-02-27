@@ -15,13 +15,6 @@ interface Assistant {
   createdAt: string;
 }
 
-interface Command {
-  assistantName: string;
-  time: string;
-  prompt: string;
-  firstMessage?: string;
-  assistantId?: string;
-}
 
 function App() {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -60,7 +53,6 @@ function App() {
 
   const calledTodayRef = useRef<Set<string>>(getInitialCalledToday());
   const isCallActiveRef = useRef(isCallActive); // Keep track of call status
-  const [refreshKey, setRefreshKey] = useState(0); // Force UI refresh
 
   // Update refs when state changes
   // useEffect(() => {
@@ -86,7 +78,7 @@ function App() {
       "calledToday",
       JSON.stringify([...calledTodayRef.current]),
     );
-    setRefreshKey((k) => k + 1);
+
 
     try {
       await fetch(`${API_BASE_URL}/api/commands/called`, {
