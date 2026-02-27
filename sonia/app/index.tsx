@@ -114,7 +114,7 @@ export default function CarouselScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.headerButtonIcon}>☰</Text>
-          <Text style={styles.headerButtonText}>Menu</Text>
+          <Text style={styles.headerButtonText}>Menü</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -122,7 +122,7 @@ export default function CarouselScreen() {
           onPress={() => router.push("/talk-ai")}
           activeOpacity={0.7}
         >
-          <Text style={styles.aiButtonText}>✦ Talk AI</Text>
+          <Text style={styles.aiButtonText}>✦ Yapay Zekâ ile Konuş</Text>
         </TouchableOpacity>
       </View>
 
@@ -154,7 +154,7 @@ export default function CarouselScreen() {
             {/* Overlay label */}
             <View style={styles.imageOverlay}>
               <Text style={styles.imageLabel}>{ITEMS[currentIndex].label}</Text>
-              <Text style={styles.tapHint}>Tap to play sound</Text>
+              <Text style={styles.tapHint}>Sesi çalmak için dokun</Text>
             </View>
           </Animated.View>
         </TouchableOpacity>

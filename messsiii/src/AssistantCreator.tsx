@@ -25,17 +25,17 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
 
   const createAssistant = async () => {
     if (!prompt.trim()) {
-      setError('Please enter a prompt');
+      setError('Lütfen bir istem girin');
       return;
     }
 
     if (!elevenLabsVoiceId) {
-      setError('No voice ID found. Please complete voice setup in the mobile app.');
+      setError('Ses kimliği bulunamadı. Lütfen mobil uygulamada ses kurulumunu tamamlayın.');
       return;
     }
 
     if (!assistantName.trim()) {
-      setError('Please enter an assistant name');
+      setError('Lütfen bir asistan adı girin');
       return;
     }
 
@@ -71,7 +71,7 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create assistant');
+        throw new Error(errorData.message || 'Asistan oluşturulamadı');
       }
 
       const data = await response.json();
@@ -81,7 +81,7 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
         onAssistantCreated(data.id);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred while creating the assistant');
+      setError(err.message || 'Asistan oluşturulurken bir hata oluştu');
       console.error('Error creating assistant:', err);
     } finally {
       setIsLoading(false);
@@ -90,40 +90,40 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
 
   return (
     <div className="assistant-creator">
-      <h2>Create New Vapi Assistant</h2>
+      <h2>Yeni Vapi Asistanı Oluştur</h2>
       
       <div className="form-group">
-        <label htmlFor="assistantName">Assistant Name:</label>
+        <label htmlFor="assistantName">Asistan Adı:</label>
         <input
           id="assistantName"
           type="text"
           value={assistantName}
           onChange={(e) => setAssistantName(e.target.value)}
-          placeholder="Enter the assistant name..."
+          placeholder="Asistan adını girin..."
           disabled={isLoading}
         />
       </div>
 
       <div className="form-group">
-        <label htmlFor="prompt">System Prompt:</label>
+        <label htmlFor="prompt">Sistem İstemi:</label>
         <textarea
           id="prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Enter the system prompt for your AI assistant..."
+          placeholder="Yapay zekâ asistanınız için sistem istemini girin..."
           rows={4}
           disabled={isLoading}
         />
       </div>
 
       <div className="form-group">
-        <label htmlFor="voiceId">ElevenLabs Voice ID (from mobile app):</label>
+        <label htmlFor="voiceId">ElevenLabs Ses Kimliği (mobil uygulamadan):</label>
         <input
           id="voiceId"
           type="text"
           value={elevenLabsVoiceId}
           onChange={(e) => setManualVoiceId(e.target.value)}
-          placeholder="Voice ID is passed from Sonia mobile app webview"
+          placeholder="Ses kimliği Sonia mobil uygulaması web görünümünden aktarılır"
           disabled={isLoading || Boolean(new URLSearchParams(window.location.search).get('voiceId')?.trim())}
         />
       </div>
@@ -135,14 +135,14 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
         disabled={isLoading}
         className="create-button"
       >
-        {isLoading ? 'Creating...' : 'Create Assistant'}
+        {isLoading ? 'Oluşturuluyor...' : 'Asistan Oluştur'}
       </button>
 
       {createdAssistantId && (
         <div className="success-message">
-          <p>Assistant created successfully!</p>
-          <p>Assistant ID: <strong>{createdAssistantId}</strong></p>
-          <p className="hint">You can use this ID to start calls with your custom assistant.</p>
+          <p>Asistan başarıyla oluşturuldu!</p>
+          <p>Asistan Kimliği: <strong>{createdAssistantId}</strong></p>
+          <p className="hint">Bu kimliği özel asistanınızla arama başlatmak için kullanabilirsiniz.</p>
         </div>
       )}
     </div>

@@ -153,7 +153,7 @@ function App() {
         // Map the response to Assistant interface
         const assistantList: Assistant[] = data.map((assistant: any) => ({
           id: assistant.id,
-          name: assistant.name || "Unnamed Assistant",
+          name: assistant.name || "Adsız Asistan",
           createdAt: assistant.createdAt,
         }));
         setAssistants(assistantList);
@@ -410,7 +410,7 @@ function App() {
 
   const updateAssistantName = async () => {
     if (!assistantName.trim()) {
-      alert("Please enter an assistant name");
+      alert("Lütfen bir asistan adı girin");
       return;
     }
 
@@ -430,28 +430,28 @@ function App() {
       );
 
       if (response.ok) {
-        alert("Assistant name updated successfully!");
+        alert("Asistan adı başarıyla güncellendi!");
         setAssistantName("");
         fetchAssistants();
       } else {
-        alert("Failed to update assistant name");
+        alert("Asistan adı güncellenemedi");
       }
     } catch (error) {
-      console.error("Error updating assistant name:", error);
-      alert("Error updating assistant name");
+      console.error("Asistan adı güncellenirken hata oluştu:", error);
+      alert("Asistan adı güncellenirken hata oluştu");
     }
   };
 
   return (
     <>
       <div className="header">
-        <h1>Vapi Assistant</h1>
+        <h1>Vapi Asistanı</h1>
         <button
           onClick={() => setShowCreator(!showCreator)}
           className="toggle-button"
           style={{ display: "none" }}
         >
-          {showCreator ? "Back to Call" : "Create New Assistant"}
+          {showCreator ? "Aramaya Dön" : "Yeni Asistan Oluştur"}
         </button>
       </div>
 
@@ -460,9 +460,9 @@ function App() {
       ) : (
         <div className="call-section">
           <div className="form-group">
-            <label htmlFor="assistantSelect">Select Assistant:</label>
+            <label htmlFor="assistantSelect">Asistan Seçin:</label>
             {isLoadingAssistants ? (
-              <p>Loading assistants...</p>
+              <p>Asistanlar yükleniyor...</p>
             ) : assistants.length > 0 ? (
               <select
                 id="assistantSelect"
@@ -477,14 +477,14 @@ function App() {
                 ))}
               </select>
             ) : (
-              <p>No assistants found. Create one first!</p>
+              <p>Asistan bulunamadı. Önce bir tane oluşturun!</p>
             )}
             <button
               onClick={fetchAssistants}
               className="refresh-button"
               disabled={isLoadingAssistants}
             >
-              {isLoadingAssistants ? "Loading..." : "Refresh List"}
+              {isLoadingAssistants ? "Yükleniyor..." : "Listeyi Yenile"}
             </button>
           </div>
 
@@ -500,31 +500,31 @@ function App() {
           </div> */}
 
           <div className="form-group">
-            <label htmlFor="newAssistantName">Update Assistant Name:</label>
+            <label htmlFor="newAssistantName">Asistan Adını Güncelle:</label>
             <input
               id="newAssistantName"
               type="text"
               value={assistantName}
               onChange={(e) => setAssistantName(e.target.value)}
-              placeholder="Enter new assistant name"
+              placeholder="Yeni asistan adını girin"
             />
             <button onClick={updateAssistantName} className="update-button">
-              Update Name
+              Adı Güncelle
             </button>
           </div>
 
           <div className="card">
             {!isCallActive ? (
-              <button onClick={startCall}>Start Call</button>
+              <button onClick={startCall}>Aramayı Başlat</button>
             ) : (
               <button onClick={endCall} style={{ backgroundColor: "#ff4444" }}>
-                End Call
+                Aramayı Bitir
               </button>
             )}
             <p>
               {isCallActive
-                ? "Call is active..."
-                : "Click to start a call with your Vapi assistant"}
+                ? "Arama aktif..."
+                : "Vapi asistanınızla arama başlatmak için tıklayın"}
             </p>
           </div>
 

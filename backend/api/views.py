@@ -111,11 +111,11 @@ def commands(request):
             
             return JsonResponse({
                 'success': True,
-                'message': 'Command received and assistant created',
+                'message': 'Komut alındı ve asistan oluşturuldu',
                 'assistantId': assistant_id
             })
         except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
         except Exception as e:
             logger.error(f'Error parsing command: {e}')
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -139,9 +139,9 @@ def update_called(request):
             logger.info(f'Updated last called date for {assistant_id}: {date}')
             return JsonResponse({'success': True})
         else:
-            return JsonResponse({'success': False, 'error': 'Missing assistantId or date'}, status=400)
+            return JsonResponse({'success': False, 'error': 'assistantId veya tarih eksik'}, status=400)
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
     except Exception as e:
         logger.error(f'Error updating called date: {e}')
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -171,14 +171,14 @@ def register_push_token(request):
         data = json.loads(request.body)
         token = data.get('token')
         if not token:
-            return JsonResponse({'success': False, 'error': 'Missing token'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Token eksik'}, status=400)
 
         from .models import PushToken
         PushToken.objects.update_or_create(token=token)
         logger.info(f'Registered push token: {token}')
         return JsonResponse({'success': True})
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
     except Exception as e:
         logger.error(f'Error registering push token: {e}')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -198,7 +198,7 @@ def send_push_notification(request):
         tokens = list(PushToken.objects.values_list('token', flat=True))
 
         if not tokens:
-            return JsonResponse({'success': False, 'error': 'No registered devices'}, status=404)
+            return JsonResponse({'success': False, 'error': 'Kayıtlı cihaz yok'}, status=404)
 
         messages = [
             {
@@ -230,7 +230,7 @@ def send_push_notification(request):
             'expoResponse': response.json(),
         })
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
     except Exception as e:
         logger.error(f'Error sending push notification: {e}')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -242,9 +242,9 @@ def voice_clone(request):
     try:
         audio_file = request.FILES.get('audio')
         if not audio_file:
-            return JsonResponse({'success': False, 'error': 'No audio file provided'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Ses dosyası sağlanmadı'}, status=400)
 
-        name = request.POST.get('name', 'Sonia User Voice')
+        name = request.POST.get('name', 'Sonia Kullanıcı Sesi')
 
         logger.info(f'Voice clone request received: {audio_file.name} ({audio_file.size} bytes)')
         
@@ -259,7 +259,7 @@ def voice_clone(request):
             return JsonResponse({'success': True, 'voiceId': voice.voice_id})
         else:
             logger.error(f'Unexpected response from ElevenLabs: {voice}')
-            return JsonResponse({'success': False, 'error': 'Failed to clone voice'}, status=422)
+            return JsonResponse({'success': False, 'error': 'Ses klonlanamadı'}, status=422)
 
     
     except Exception as e:
