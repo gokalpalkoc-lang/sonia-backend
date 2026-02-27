@@ -18,14 +18,36 @@ import pic3 from "../assets/images/gojo.jpg";
 import pic2 from "../assets/images/keddy.png";
 import pic1 from "../assets/images/manzara.jpg";
 
-import sound1 from "../assets/audio/ses1.m4a";
-import sound2 from "../assets/audio/ses2.m4a";
-import sound3 from "../assets/audio/ses3.m4a";
+import img3 from "../assets/images/3.png";
+import img5 from "../assets/images/5.png";
+import img8 from "../assets/images/8.png";
+import img9 from "../assets/images/9.png";
+import img12 from "../assets/images/12.png";
+import img13 from "../assets/images/13.png";
+import img14 from "../assets/images/14.png";
+
+// import sound1 from "../assets/audio/ses1.m4a";
+// import sound2 from "../assets/audio/ses2.m4a";
+// import sound3 from "../assets/audio/ses3.m4a";
+import sound3_new from "../assets/audio/3.mp3";
+import sound5 from "../assets/audio/5.mp3";
+import sound8 from "../assets/audio/8.mp3";
+import sound9 from "../assets/audio/9.mp3";
+import sound12 from "../assets/audio/12.mp3";
+import sound13 from "../assets/audio/13.mp3";
+import sound14 from "../assets/audio/14.mp3";
 
 const ITEMS = [
-  { image: pic1, sound: sound1, label: "Manzara" },
-  { image: pic2, sound: sound2, label: "Keddy" },
-  { image: pic3, sound: sound3, label: "Gojo" },
+  // { image: pic1, sound: sound1, label: "Manzara" },
+  // { image: pic2, sound: sound2, label: "Keddy" },
+  // { image: pic3, sound: sound3, label: "Gojo" },
+  { image: img3, sound: sound3_new, label: "Image 3" },
+  { image: img5, sound: sound5, label: "Image 5" },
+  { image: img8, sound: sound8, label: "Image 8" },
+  { image: img9, sound: sound9, label: "Image 9" },
+  { image: img12, sound: sound12, label: "Image 12" },
+  { image: img13, sound: sound13, label: "Image 13" },
+  { image: img14, sound: sound14, label: "Image 14" },
 ];
 
 export default function CarouselScreen() {
@@ -152,10 +174,10 @@ export default function CarouselScreen() {
               resizeMode="cover"
             />
             {/* Overlay label */}
-            <View style={styles.imageOverlay}>
+            {/* <View style={styles.imageOverlay}>
               <Text style={styles.imageLabel}>{ITEMS[currentIndex].label}</Text>
               <Text style={styles.tapHint}>Sesi çalmak için dokun</Text>
-            </View>
+            </View> */}
           </Animated.View>
         </TouchableOpacity>
 
