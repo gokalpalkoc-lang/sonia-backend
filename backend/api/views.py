@@ -80,7 +80,8 @@ def commands(request):
                         'voice': {
                             'provider': '11labs',
                             'voiceId': voice_id,
-                            'language':"tr"
+                            'language':"tr",
+                            "model":"eleven_turbo_v2_5"
                         },
                         'transcriber': {
                             'provider': '11labs',
