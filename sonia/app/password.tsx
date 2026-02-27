@@ -24,7 +24,7 @@ export default function PasswordScreen() {
       setPasswordInput("");
       router.replace("/protected");
     } else {
-      Alert.alert("Access Denied", "The password you entered is incorrect.");
+      Alert.alert("Erişim Reddedildi", "Girdiğiniz şifre yanlış.");
       setPasswordInput("");
     }
   };
@@ -40,9 +40,9 @@ export default function PasswordScreen() {
           <Text style={styles.lockIcon}>🔒</Text>
         </View>
 
-        <Text style={styles.title}>Enter Password</Text>
+        <Text style={styles.title}>Şifreyi Girin</Text>
         <Text style={styles.subtitle}>
-          This area is password-protected.
+          Bu alan şifreyle korunuyor.
         </Text>
 
         <TextInput
@@ -50,19 +50,19 @@ export default function PasswordScreen() {
           secureTextEntry
           value={passwordInput}
           onChangeText={setPasswordInput}
-          placeholder="Password"
+          placeholder="Şifre"
           placeholderTextColor="rgba(255,255,255,0.3)"
           autoFocus
           onSubmitEditing={checkPassword}
           returnKeyType="go"
         />
 
-        <TouchableOpacity
+          <TouchableOpacity
           style={styles.submitButton}
           onPress={checkPassword}
           activeOpacity={0.8}
         >
-          <Text style={styles.submitText}>Unlock</Text>
+          <Text style={styles.submitText}>Kilidi Aç</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -70,7 +70,7 @@ export default function PasswordScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backText}>← Go Back</Text>
+          <Text style={styles.backText}>← Geri Dön</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

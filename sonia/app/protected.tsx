@@ -9,19 +9,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useCommands } from "@/context/commands-context";
+import { useKomutlar } from "@/context/commands-context";
 
 export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
+  const { commands, deleteCommand, toggleExpand, setKomutlar } = useKomutlar();
 
   // Fetch commands from backend on mount 
   React.useEffect(() => {
     fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/commands`)
       .then((res) => res.json())
       .then((data) => {
-        setCommands(data.commands ?? []);
+        setKomutlar(data.commands ?? []);
         console.log("Fetched commands from backend:", data.commands);
       })
       .catch((error) => {
@@ -34,7 +34,7 @@ export default function ProtectedScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Commands</Text>
+        <Text style={styles.title}>Komutlar</Text>
         <Text style={styles.badge}>{commands.length}</Text>
       </View>
 
@@ -47,9 +47,9 @@ export default function ProtectedScreen() {
         {commands.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No commands yet</Text>
+            <Text style={styles.emptyTitle}>Henüz komut yok</Text>
             <Text style={styles.emptyText}>
-              Tap "Add Command" to create your first one.
+              İlk komutunuzu oluşturmak için "Komut Ekle"ye dokunun.
             </Text>
           </View>
         )}
@@ -82,7 +82,7 @@ export default function ProtectedScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.expandText}>
-                  {cmd.expanded ? "Show less ▲" : "Show more ▼"}
+                  {cmd.expanded ? "Daha az göster ▲" : "Daha fazla göster ▼"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -97,7 +97,7 @@ export default function ProtectedScreen() {
           onPress={() => router.push("/add-command")}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+ Add Command</Text>
+          <Text style={styles.addButtonText}>+ Komut Ekle</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -105,7 +105,7 @@ export default function ProtectedScreen() {
           onPress={() => router.dismissAll()}
           activeOpacity={0.7}
         >
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>Çıkış Yap</Text>
         </TouchableOpacity>
       </View>
     </View>

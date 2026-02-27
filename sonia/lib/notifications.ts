@@ -64,7 +64,7 @@ export async function initializeNotifications() {
   if (!granted) return;
 
   await Notifications.setNotificationChannelAsync("commands", {
-    name: "Command Reminders",
+    name: "Komut Hatırlatıcıları",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
   });
@@ -96,7 +96,7 @@ export async function scheduleCommandReminder(command: Command) {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: "Sonia Command Reminder",
+      title: "Sonia Komut Hatırlatıcısı",
       body: commandText,
       sound: true,
       data: {

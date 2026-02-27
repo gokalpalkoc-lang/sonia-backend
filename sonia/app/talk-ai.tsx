@@ -180,9 +180,9 @@ export default function TalkAIScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={styles.backButtonText}>← Geri</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>✦ Talk AI</Text>
+        <Text style={styles.headerTitle}>✦ Yapay Zekâ ile Konuş</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -200,7 +200,7 @@ export default function TalkAIScreen() {
         renderLoading={() => (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.loadingText}>Loading Talk AI...</Text>
+            <Text style={styles.loadingText}>Yapay zekâ ekranı yükleniyor...</Text>
           </View>
         )}
       />

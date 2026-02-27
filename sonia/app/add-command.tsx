@@ -27,20 +27,20 @@ export default function AddCommandScreen() {
   const { addCommand } = useCommands();
 
   const [assistantName, setAssistantName] = useState("");
-  const [timeInput, setTimeInput] = useState("");
+  const [timeInput, setSaatInput] = useState("");
   const [promptInput, setPromptInput] = useState("");
   const [firstMessageInput, setFirstMessageInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAppend = async () => {
     if (!assistantName.trim()) {
-      Alert.alert("Missing Fields", "Please enter an assistant name.");
+      Alert.alert("Eksik Alanlar", "Lütfen bir asistan adı girin.");
       return;
     }
     if (!timeInput.trim() || !promptInput.trim() || !firstMessageInput.trim()) {
       Alert.alert(
-        "Missing Fields",
-        "Please enter time, prompt, and first message.",
+        "Eksik Alanlar",
+        "Lütfen saat, istem ve ilk mesajı girin.",
       );
       return;
     }
@@ -123,39 +123,38 @@ export default function AddCommandScreen() {
         contentContainerStyle={[styles.inner, { paddingTop: insets.top + 24 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>New Command</Text>
+        <Text style={styles.title}>Yeni Komut</Text>
         <Text style={styles.subtitle}>
-          Set an assistant name, time, system prompt, and first message for the
-          command.
+          Komut için bir asistan adı, saat, sistem istemi ve ilk mesaj belirleyin.
         </Text>
 
-        {/* Assistant Name */}
-        <Text style={styles.label}>Assistant Name</Text>
+        {/* Asistan Adı */}
+        <Text style={styles.label}>Asistan Adı</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g., My Assistant"
+          placeholder="ör. Benim Asistanım"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={assistantName}
           onChangeText={setAssistantName}
           autoFocus
         />
 
-        {/* Time */}
-        <Text style={styles.label}>Time</Text>
+        {/* Saat */}
+        <Text style={styles.label}>Saat</Text>
         <TextInput
           style={styles.input}
           placeholder="HH:MM"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={timeInput}
-          onChangeText={setTimeInput}
+          onChangeText={setSaatInput}
           keyboardType="numbers-and-punctuation"
         />
 
-        {/* Prompt (System Prompt) */}
-        <Text style={styles.label}>System Prompt</Text>
+        {/* Prompt (Sistem İstemi) */}
+        <Text style={styles.label}>Sistem İstemi</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Describe the command..."
+          placeholder="Komutu açıklayın..."
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={promptInput}
           onChangeText={setPromptInput}
@@ -163,11 +162,11 @@ export default function AddCommandScreen() {
           textAlignVertical="top"
         />
 
-        {/* First Message */}
-        <Text style={styles.label}>First Message</Text>
+        {/* İlk Mesaj */}
+        <Text style={styles.label}>İlk Mesaj</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="What should the assistant say first?"
+          placeholder="Asistan önce ne söylemeli?"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={firstMessageInput}
           onChangeText={setFirstMessageInput}
@@ -185,7 +184,7 @@ export default function AddCommandScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? "Creating..." : "Create Assistant"}
+            {isLoading ? "Oluşturuluyor..." : "Asistan Oluştur"}
           </Text>
         </TouchableOpacity>
 
@@ -194,7 +193,7 @@ export default function AddCommandScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>İptal</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
