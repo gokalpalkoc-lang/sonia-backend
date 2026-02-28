@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sonia</title>
+    <!-- Preconnect to Vapi servers: start DNS+TCP+TLS while JS bundle loads -->
+    <link rel="preconnect" href="https://api.vapi.ai" crossorigin />
+    <link rel="dns-prefetch" href="https://api.vapi.ai" />
+    <!-- Daily.co is Vapi's WebRTC provider -->
+    <link rel="preconnect" href="https://prod-ks.pluot.blue" crossorigin />
+    <link rel="dns-prefetch" href="https://prod-ks.pluot.blue" />
   </head>
   <body>
     <div id="root"></div>

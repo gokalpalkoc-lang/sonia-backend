@@ -86,6 +86,7 @@ def commands(request):
                         'transcriber': {
                             'provider': '11labs',
                             'language': 'tr',
+                            'model':"scribe_v1"
                         },
                         'firstMessage': first_message,
                     },
