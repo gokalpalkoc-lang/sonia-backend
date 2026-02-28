@@ -73,7 +73,7 @@ def commands(request):
                         'name': assistant_name,
                         'model': {
                             'provider': 'openai',
-                            'model': 'gpt-5-nano',
+                            'model': 'gpt-5.2-chat-latest',
                             'systemPrompt': f"{MASTER_PROMPT}\n\n{prompt}",
                             'maxTokens': 800,
                         },
