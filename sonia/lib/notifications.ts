@@ -51,13 +51,21 @@ export async function registerForPushNotifications() {
 
 export async function initializeNotifications() {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+    handleNotification: async (notification) => {
+      const data = notification.request.content.data ?? {};
+      // If this notification will auto-navigate (screen === "talk-ai"),
+      // suppress the visible alert so the user isn't distracted by a
+      // banner that immediately gets hidden by the screen transition.
+      const willAutoNavigate = data.screen === "talk-ai";
+
+      return {
+        shouldShowAlert: !willAutoNavigate,
+        shouldPlaySound: !willAutoNavigate,
+        shouldSetBadge: false,
+        shouldShowBanner: !willAutoNavigate,
+        shouldShowList: !willAutoNavigate,
+      };
+    },
   });
 
   const { granted } = await Notifications.requestPermissionsAsync();
