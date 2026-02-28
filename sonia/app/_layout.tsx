@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
+import { AuthProvider } from "@/context/auth-context";
 import { CommandsProvider } from "@/context/commands-context";
 import {
   addNotificationReceivedListener,
@@ -66,7 +67,7 @@ function NavigationEffects() {
           typeof params.assistantId === "string"
             ? params.assistantId
             : undefined;
-            
+
         router.push({
           pathname: "/talk-ai",
           params: {
@@ -89,26 +90,30 @@ function NavigationEffects() {
 
 export default function RootLayout() {
   return (
-    <CommandsProvider>
-      <NavigationEffects />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#0D0D1A" },
-          animation: "slide_from_right",
-        }}
-      >
-        <Stack.Screen name="voice-setup" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="index" />
-        <Stack.Screen name="password" />
-        <Stack.Screen name="protected" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="talk-ai" />
-        <Stack.Screen
-          name="add-command"
-          options={{ presentation: "modal", animation: "slide_from_bottom" }}
-        />
-      </Stack>
-      <StatusBar style="light" />
-    </CommandsProvider>
+    <AuthProvider>
+      <CommandsProvider>
+        <NavigationEffects />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: "#0D0D1A" },
+            animation: "slide_from_right",
+          }}
+        >
+          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="voice-setup" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="index" />
+          <Stack.Screen name="password" />
+          <Stack.Screen name="protected" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="talk-ai" />
+          <Stack.Screen
+            name="add-command"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
+          />
+        </Stack>
+        <StatusBar style="light" />
+      </CommandsProvider>
+    </AuthProvider>
   );
 }

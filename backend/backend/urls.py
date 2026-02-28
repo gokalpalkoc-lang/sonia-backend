@@ -16,14 +16,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from api import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Auth endpoints
+    path('api/auth/register', views.register, name='register'),
+    path('api/auth/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/auth/profile', views.profile, name='profile'),
+    # Protected API endpoints (require JWT)
     path('api/commands', views.commands, name='commands'),
-    path('api/commands/called', views.update_called, name='update_called'),
-    path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
     path('api/voice-clone', views.voice_clone, name='voice_clone'),
     path('api/register-push-token', views.register_push_token, name='register_push_token'),
     path('api/send-push', views.send_push_notification, name='send_push_notification'),
+    # Public endpoints (no auth required)
+    path('api/commands/called', views.update_called, name='update_called'),
+    path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
 ]
+

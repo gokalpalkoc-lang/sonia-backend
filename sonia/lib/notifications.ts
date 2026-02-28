@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 
+import { apiFetch } from "@/lib/api";
 import type { Command } from "@/types/command";
 
 export interface NotificationPayload {
@@ -18,8 +19,6 @@ function toNotificationPayload(data: Record<string, unknown>) {
       typeof data.assistantId === "string" ? data.assistantId : undefined,
   } satisfies NotificationPayload;
 }
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
 /**
  * Must be called at module level (outside any component) so the native
@@ -57,9 +56,8 @@ export async function registerForPushNotifications() {
   );
 
   try {
-    await fetch(`${BACKEND_URL}/api/register-push-token`, {
+    await apiFetch('/api/register-push-token', {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: tokenData.data }),
     });
   } catch (error) {

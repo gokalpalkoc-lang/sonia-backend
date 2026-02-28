@@ -2,5 +2,6 @@ elevenlabs
 python-dotenv
 Django
 djangorestframework
+djangorestframework-simplejwt
 django-cors-headers
 daphne
