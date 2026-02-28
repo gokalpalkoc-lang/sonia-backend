@@ -22,6 +22,28 @@ function toNotificationPayload(data: Record<string, unknown>) {
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
 /**
+ * Must be called at module level (outside any component) so the native
+ * notification system knows how to present a notification that arrives
+ * while the app is in the foreground.  If this is deferred to a
+ * useEffect / async call the handler may not be registered in time and
+ * foreground notifications are silently dropped.
+ */
+Notifications.setNotificationHandler({
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data ?? {};
+    const willAutoNavigate = data.screen === "talk-ai";
+
+    return {
+      shouldShowAlert: !willAutoNavigate,
+      shouldPlaySound: !willAutoNavigate,
+      shouldSetBadge: false,
+      shouldShowBanner: !willAutoNavigate,
+      shouldShowList: !willAutoNavigate,
+    };
+  },
+});
+
+/**
  * Register the device's Expo push token with the backend so it can
  * receive server-initiated push notifications.
  */
@@ -50,24 +72,6 @@ export async function registerForPushNotifications() {
 
 
 export async function initializeNotifications() {
-  Notifications.setNotificationHandler({
-    handleNotification: async (notification) => {
-      const data = notification.request.content.data ?? {};
-      // If this notification will auto-navigate (screen === "talk-ai"),
-      // suppress the visible alert so the user isn't distracted by a
-      // banner that immediately gets hidden by the screen transition.
-      const willAutoNavigate = data.screen === "talk-ai";
-
-      return {
-        shouldShowAlert: !willAutoNavigate,
-        shouldPlaySound: !willAutoNavigate,
-        shouldSetBadge: false,
-        shouldShowBanner: !willAutoNavigate,
-        shouldShowList: !willAutoNavigate,
-      };
-    },
-  });
-
   const { granted } = await Notifications.requestPermissionsAsync();
   if (!granted) return;
 
@@ -116,6 +120,7 @@ export async function scheduleCommandReminder(command: Command) {
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: trigger,
+      channelId: "commands",
     },
   });
 }
