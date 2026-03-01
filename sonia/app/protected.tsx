@@ -9,16 +9,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/auth-context";
 import { useCommands } from "@/context/commands-context";
+import { apiFetch } from "@/lib/api";
 
 export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
+  const { logout } = useAuth();
 
-  // Fetch commands from backend on mount 
+  // Fetch commands from backend on mount (authenticated)
   React.useEffect(() => {
-    fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/api/commands`)
+    apiFetch('/api/commands')
       .then((res) => res.json())
       .then((data) => {
         setCommands(data.commands ?? []);
@@ -29,6 +32,10 @@ export default function ProtectedScreen() {
       });
   }, []);
 
+  const handleLogout = async () => {
+    await logout();
+    router.dismissAll();
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
@@ -102,7 +109,7 @@ export default function ProtectedScreen() {
 
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={() => router.dismissAll()}
+          onPress={() => router.push("/")}
           activeOpacity={0.7}
         >
           <Text style={styles.logoutText}>Çıkış Yap</Text>

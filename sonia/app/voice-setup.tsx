@@ -11,9 +11,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/auth-context";
+import { apiFetchForm } from "@/lib/api";
 import { setVoiceId } from "@/lib/storage";
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 const RECORD_DURATION = 30; // seconds
 const URI_WAIT_TIMEOUT_MS = 2500;
 const URI_POLL_INTERVAL_MS = 100;
@@ -24,6 +25,7 @@ export default function VoiceSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const { refreshProfile } = useAuth();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(RECORD_DURATION);
@@ -120,7 +122,7 @@ export default function VoiceSetupScreen() {
       } as any);
       formData.append("name", "Sonia User Voice");
 
-      const response = await fetch(`${BACKEND_URL}/api/voice-clone`, {
+      const response = await apiFetchForm('/api/voice-clone', {
         method: "POST",
         body: formData,
       });
@@ -128,8 +130,9 @@ export default function VoiceSetupScreen() {
       const data = await response.json();
 
       if (response.ok && data.success && data.voiceId) {
-        // Store voice ID locally
+        // Store voice ID locally and in the backend profile
         await setVoiceId(data.voiceId);
+        await refreshProfile();
         setPhase("done");
 
         // Small delay so user sees the success state, then navigate

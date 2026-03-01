@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/auth-context";
 import { isVoiceSetupDone } from "@/lib/storage";
 
 import pic3 from "../assets/images/gojo.jpg";
@@ -53,12 +54,21 @@ const ITEMS = [
 export default function CarouselScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { token, isLoading: authLoading, profile } = useAuth();
 
   // Check if voice setup has been completed
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   useEffect(() => {
-    isVoiceSetupDone().then((c)=>setVoiceReady(c));
-  }, []);
+    if (token) {
+      // Voice setup done if the user's profile has a voice_id OR local flag is set
+      const profileHasVoice = !!(profile?.voice_id);
+      if (profileHasVoice) {
+        setVoiceReady(true);
+      } else {
+        isVoiceSetupDone().then((c) => setVoiceReady(c));
+      }
+    }
+  }, [token, profile]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const player = useAudioPlayer(ITEMS[currentIndex].sound);
@@ -106,8 +116,8 @@ export default function CarouselScreen() {
     });
   };
 
-  // Show loading while checking voice setup status
-  if (voiceReady === null) {
+  // Show loading while checking auth / voice setup
+  if (authLoading || (token && voiceReady === null)) {
     return (
       <View
         style={[
@@ -120,7 +130,11 @@ export default function CarouselScreen() {
     );
   }
 
-  console.log(voiceReady)
+  // Redirect to login if not authenticated
+  if (!token) {
+    return <Redirect href={"/login" as const} />;
+  }
+
   // Redirect to voice setup if not completed
   if (!voiceReady) {
     return <Redirect href={"/voice-setup" as const} />;
@@ -173,11 +187,6 @@ export default function CarouselScreen() {
               style={styles.image}
               resizeMode="cover"
             />
-            {/* Overlay label */}
-            {/* <View style={styles.imageOverlay}>
-              <Text style={styles.imageLabel}>{ITEMS[currentIndex].label}</Text>
-              <Text style={styles.tapHint}>Sesi çalmak için dokun</Text>
-            </View> */}
           </Animated.View>
         </TouchableOpacity>
 

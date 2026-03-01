@@ -13,13 +13,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCommands } from "@/context/commands-context";
+import { apiFetch } from "@/lib/api";
 import { scheduleCommandReminder } from "@/lib/notifications";
 import { getVoiceId } from "@/lib/storage";
 import type { Command } from "@/types/command";
-
-// Server URL for messsiii - change this to your computer's network IP
-// The phone needs to access the computer's IP, not localhost
-const MESSIII_SERVER_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
 export default function AddCommandScreen() {
   const router = useRouter();
@@ -60,11 +57,8 @@ export default function AddCommandScreen() {
       const voiceId = await getVoiceId();
       const payload = voiceId ? { ...newCommand, voiceId } : newCommand;
 
-      const response = await fetch(`${MESSIII_SERVER_URL}/api/commands`, {
+      const response = await apiFetch('/api/commands', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(payload),
       });
 
@@ -72,12 +66,12 @@ export default function AddCommandScreen() {
       if (response.ok) {
         const data = await response.json();
         assistantId = data.assistantId ?? undefined;
-        console.log("Command sent to messsiii successfully");
+        console.log("Command sent to backend successfully");
         if (assistantId) {
           console.log("Created assistant ID:", assistantId);
         }
       } else {
-        console.error("Failed to send command to messsiii:", response.status);
+        console.error("Failed to send command to backend:", response.status);
       }
 
       // Add command locally with the assistantId and schedule reminder
@@ -97,7 +91,7 @@ export default function AddCommandScreen() {
         console.error("Failed to schedule reminder", error);
       }
     } catch (error) {
-      console.error("Error sending command to messsiii:", error);
+      console.error("Error sending command to backend:", error);
       // Still add command locally without assistantId
       const localCommand: Command = {
         id: `${Date.now()}`,
