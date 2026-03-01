@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../config";
+import { fetchCommands, createCommand, deleteCommand } from "../api";
 
 interface Command {
   assistantName: string;
@@ -32,24 +32,22 @@ export default function CommandsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchCommands = async () => {
+  const loadCommands = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/commands`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchCommands();
       setCommands(data.commands ?? []);
     } catch {
-      setError("Komutlar yüklenemedi. Backend bağlantısını kontrol edin.");
+      setError("Komutlar yüklenemedi. Bağlantıyı kontrol edin.");
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCommands();
-  }, []);
+  useEffect(() => { loadCommands(); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,15 +58,10 @@ export default function CommandsPage() {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/commands`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await createCommand(form as unknown as Record<string, unknown>);
       setForm(emptyForm);
       setShowForm(false);
-      await fetchCommands();
+      await loadCommands();
     } catch {
       setSubmitError("Komut eklenemedi. Tekrar deneyin.");
     } finally {
@@ -76,75 +69,84 @@ export default function CommandsPage() {
     }
   };
 
+  const handleDelete = async (cmd: Command) => {
+    if (!cmd.assistantId) return;
+    if (!confirm(`"${cmd.assistantName}" komutunu silmek istediğinizden emin misiniz?`)) return;
+    setDeletingId(cmd.assistantId);
+    try {
+      await deleteCommand(cmd.assistantId);
+      await loadCommands();
+    } catch {
+      alert("Komut silinemedi.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div>
-      {/* Header */}
-      <div style={styles.header}>
+      <div style={s.header}>
         <div>
-          <h1 style={styles.pageTitle}>Komutlar</h1>
-          <p style={styles.pageSubtitle}>
-            Asistan komutlarını yönetin ve yeni komutlar ekleyin.
-          </p>
+          <h1 style={s.pageTitle}>Komutlar</h1>
+          <p style={s.pageSub}>Asistan komutlarını yönetin.</p>
         </div>
-        <div style={styles.headerActions}>
-          <button onClick={fetchCommands} style={styles.refreshButton}>
-            🔄 Yenile
-          </button>
-          <button onClick={() => { setShowForm(!showForm); setSubmitError(""); }} style={styles.addButton}>
-            {showForm ? "✕ İptal" : "+ Komut Ekle"}
+        <div style={s.headerActions}>
+          <button onClick={loadCommands} style={s.ghostBtn}>🔄 Yenile</button>
+          <button
+            onClick={() => { setShowForm(!showForm); setSubmitError(""); }}
+            style={s.primaryBtn}
+          >
+            {showForm ? "✕ İptal" : "+ Ekle"}
           </button>
         </div>
       </div>
 
-      {/* Add Command Form */}
       {showForm && (
-        <div style={styles.formCard}>
-          <h2 style={styles.formTitle}>Yeni Komut</h2>
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Asistan Adı</label>
+        <div style={s.formCard}>
+          <h2 style={s.formTitle}>Yeni Komut</h2>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="form-row-2">
+              <div style={s.fieldGroup}>
+                <label style={s.label}>Asistan Adı</label>
                 <input
-                  type="text"
+                  style={s.input}
                   value={form.assistantName}
                   onChange={(e) => setForm({ ...form, assistantName: e.target.value })}
-                  placeholder="ör. Sabah Asistanı"
-                  style={styles.input}
+                  placeholder="Sabah Asistanı"
                 />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Saat (HH:MM)</label>
+              <div style={s.fieldGroup}>
+                <label style={s.label}>Saat (HH:MM)</label>
                 <input
-                  type="text"
+                  style={s.input}
                   value={form.time}
                   onChange={(e) => setForm({ ...form, time: e.target.value })}
                   placeholder="08:00"
-                  style={styles.input}
                 />
               </div>
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Sistem İstemi</label>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>Sistem İstemi</label>
               <textarea
+                style={{ ...s.input, minHeight: 90, resize: "vertical" as const }}
                 value={form.prompt}
                 onChange={(e) => setForm({ ...form, prompt: e.target.value })}
-                placeholder="Komutu açıklayın..."
-                style={{ ...styles.input, ...styles.textarea }}
+                placeholder="Komut açıklaması..."
               />
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>İlk Mesaj</label>
+            <div style={s.fieldGroup}>
+              <label style={s.label}>İlk Mesaj</label>
               <textarea
+                style={{ ...s.input, minHeight: 80, resize: "vertical" as const }}
                 value={form.firstMessage}
                 onChange={(e) => setForm({ ...form, firstMessage: e.target.value })}
                 placeholder="Asistan önce ne söylemeli?"
-                style={{ ...styles.input, ...styles.textarea }}
               />
             </div>
-            {submitError && <p style={styles.errorText}>{submitError}</p>}
+            {submitError && <p style={s.errorText}>{submitError}</p>}
             <button
               type="submit"
-              style={{ ...styles.addButton, ...(submitting ? styles.buttonDisabled : {}) }}
+              style={{ ...s.primaryBtn, ...(submitting ? s.disabled : {}), width: "100%", padding: "13px 0" }}
               disabled={submitting}
             >
               {submitting ? "Oluşturuluyor..." : "Asistan Oluştur"}
@@ -153,55 +155,62 @@ export default function CommandsPage() {
         </div>
       )}
 
-      {/* Commands List */}
       {loading ? (
-        <div style={styles.center}>
-          <p style={styles.mutedText}>Yükleniyor...</p>
-        </div>
+        <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", paddingTop: 40 }}>Yükleniyor...</p>
       ) : error ? (
-        <div style={styles.center}>
-          <p style={styles.errorText}>{error}</p>
-          <button onClick={fetchCommands} style={styles.refreshButton}>Tekrar Dene</button>
+        <div style={{ textAlign: "center", paddingTop: 40 }}>
+          <p style={s.errorText}>{error}</p>
+          <button onClick={loadCommands} style={s.ghostBtn}>Tekrar Dene</button>
         </div>
       ) : commands.length === 0 ? (
-        <div style={styles.emptyState}>
-          <span style={{ fontSize: 48 }}>📋</span>
-          <p style={styles.emptyTitle}>Henüz komut yok</p>
-          <p style={styles.mutedText}>İlk komutunuzu eklemek için "Komut Ekle"ye tıklayın.</p>
+        <div style={s.empty}>
+          <span style={{ fontSize: 44 }}>📋</span>
+          <p style={s.emptyTitle}>Henüz komut yok</p>
+          <p style={s.emptyText}>İlk komutunuzu eklemek için "+ Ekle"ye tıklayın.</p>
         </div>
       ) : (
-        <div style={styles.grid}>
+        <div className="card-grid">
           {commands.map((cmd, i) => (
-            <div key={i} style={styles.commandCard}>
-              <div style={styles.cardHeader}>
-                <span style={styles.timeBadge}>{cmd.time}</span>
-                <span style={styles.assistantName}>{cmd.assistantName}</span>
+            <div key={i} style={s.card}>
+              <div style={s.cardTop}>
+                <span style={s.timeBadge}>{cmd.time}</span>
+                <span style={s.assistantName}>{cmd.assistantName}</span>
+                {cmd.assistantId && (
+                  <button
+                    onClick={() => handleDelete(cmd)}
+                    style={s.deleteBtn}
+                    disabled={deletingId === cmd.assistantId}
+                    title="Sil"
+                  >
+                    {deletingId === cmd.assistantId ? "..." : "✕"}
+                  </button>
+                )}
               </div>
               <p
                 style={{
-                  ...styles.promptText,
+                  ...s.prompt,
                   WebkitLineClamp: expandedIndex === i ? undefined : 3,
                   display: expandedIndex === i ? "block" : "-webkit-box",
                 }}
               >
                 {cmd.prompt}
               </p>
-              {cmd.prompt.length > 120 && (
+              {cmd.prompt.length > 100 && (
                 <button
                   onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
-                  style={styles.expandButton}
+                  style={s.expandBtn}
                 >
-                  {expandedIndex === i ? "Daha az göster ▲" : "Daha fazla göster ▼"}
+                  {expandedIndex === i ? "Daha az ▲" : "Daha fazla ▼"}
                 </button>
               )}
               {cmd.firstMessage && (
-                <div style={styles.firstMessageBox}>
-                  <span style={styles.firstMessageLabel}>İlk Mesaj: </span>
-                  <span style={styles.firstMessageText}>{cmd.firstMessage}</span>
+                <div style={s.firstMsgBox}>
+                  <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>İlk mesaj: </span>
+                  <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 13 }}>{cmd.firstMessage}</span>
                 </div>
               )}
               {cmd.assistantId && (
-                <p style={styles.assistantId}>ID: {cmd.assistantId}</p>
+                <p style={s.idText}>ID: {cmd.assistantId}</p>
               )}
             </div>
           ))}
@@ -211,197 +220,30 @@ export default function CommandsPage() {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 28,
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#fff",
-    margin: "0 0 4px",
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.4)",
-    margin: 0,
-  },
-  headerActions: {
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-  },
-  addButton: {
-    backgroundColor: "#4F46E5",
-    border: "none",
-    borderRadius: 10,
-    padding: "10px 18px",
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#fff",
-    cursor: "pointer",
-  },
-  refreshButton: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    padding: "10px 16px",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    cursor: "pointer",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
-  formCard: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: "24px",
-    marginBottom: 24,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#fff",
-    margin: "0 0 20px",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  formRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 16,
-  },
-  formGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: "rgba(255,255,255,0.5)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.8px",
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    padding: "12px 14px",
-    fontSize: 14,
-    color: "#fff",
-    outline: "none",
-    width: "100%",
-  },
-  textarea: {
-    minHeight: 100,
-    resize: "vertical" as const,
-    fontFamily: "inherit",
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 13,
-    margin: 0,
-  },
-  center: {
-    textAlign: "center",
-    padding: "60px 0",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "60px 0",
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 600,
-    color: "#fff",
-    margin: 0,
-  },
-  mutedText: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
-    margin: 0,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: 16,
-  },
-  commandCard: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 20,
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  cardHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-  },
-  timeBadge: {
-    backgroundColor: "rgba(79,70,229,0.2)",
-    color: "#A5B4FC",
-    fontSize: 13,
-    fontWeight: 600,
-    padding: "4px 12px",
-    borderRadius: 8,
-  },
-  assistantName: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#fff",
-  },
-  promptText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    lineHeight: 1.6,
-    margin: 0,
-    overflow: "hidden",
-    WebkitBoxOrient: "vertical" as const,
-  },
-  expandButton: {
-    background: "none",
-    border: "none",
-    color: "#818CF8",
-    fontSize: 13,
-    cursor: "pointer",
-    padding: 0,
-    textAlign: "left" as const,
-  },
-  firstMessageBox: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontSize: 13,
-  },
-  firstMessageLabel: {
-    color: "rgba(255,255,255,0.4)",
-  },
-  firstMessageText: {
-    color: "rgba(255,255,255,0.7)",
-  },
-  assistantId: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.25)",
-    margin: 0,
-    fontFamily: "monospace",
-  },
+const s: Record<string, React.CSSProperties> = {
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 },
+  pageTitle: { fontSize: 26, fontWeight: 700, color: "#fff", margin: "0 0 4px" },
+  pageSub: { fontSize: 14, color: "rgba(255,255,255,0.4)", margin: 0 },
+  headerActions: { display: "flex", gap: 8 },
+  primaryBtn: { backgroundColor: "#4F46E5", border: "none", borderRadius: 10, padding: "10px 16px", fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer" },
+  ghostBtn: { backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.7)", cursor: "pointer" },
+  disabled: { opacity: 0.5, cursor: "not-allowed" },
+  formCard: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20, marginBottom: 20 },
+  formTitle: { fontSize: 17, fontWeight: 700, color: "#fff", margin: "0 0 16px" },
+  fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
+  label: { fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.7px" } as React.CSSProperties,
+  input: { backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#fff", outline: "none", width: "100%" },
+  errorText: { color: "#EF4444", fontSize: 13, margin: 0 },
+  empty: { display: "flex", flexDirection: "column", alignItems: "center", padding: "50px 0", gap: 10 },
+  emptyTitle: { fontSize: 17, fontWeight: 600, color: "#fff", margin: 0 },
+  emptyText: { fontSize: 14, color: "rgba(255,255,255,0.35)", margin: 0, textAlign: "center" } as React.CSSProperties,
+  card: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 10 },
+  cardTop: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  timeBadge: { backgroundColor: "rgba(79,70,229,0.2)", color: "#A5B4FC", fontSize: 13, fontWeight: 600, padding: "3px 10px", borderRadius: 7, flexShrink: 0 },
+  assistantName: { fontSize: 15, fontWeight: 600, color: "#fff", flex: 1 },
+  deleteBtn: { background: "rgba(239,68,68,0.12)", border: "none", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", borderRadius: 7, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } as React.CSSProperties,
+  prompt: { color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.6, margin: 0, overflow: "hidden", WebkitBoxOrient: "vertical" as const },
+  expandBtn: { background: "none", border: "none", color: "#818CF8", fontSize: 13, cursor: "pointer", padding: 0, textAlign: "left" } as React.CSSProperties,
+  firstMsgBox: { backgroundColor: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 12px" },
+  idText: { fontSize: 11, color: "rgba(255,255,255,0.2)", margin: 0, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 };

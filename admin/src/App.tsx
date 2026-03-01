@@ -1,50 +1,83 @@
 import { useState } from "react";
-import { ADMIN_PASSWORD } from "./config";
+import { login, clearTokens, getAccessToken } from "./api";
 import Dashboard from "./pages/Dashboard";
 import "./index.css";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState<string | null>(getAccessToken);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setError("");
-    } else {
-      setError("Hatalı şifre. Lütfen tekrar deneyin.");
-      setPassword("");
+    if (!username.trim() || !password.trim()) {
+      setError("Lütfen kullanıcı adı ve şifre girin.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const data = await login(username, password);
+      setToken(data.access);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Giriş başarısız.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (isAuthenticated) {
-    return <Dashboard onLogout={() => setIsAuthenticated(false)} />;
+  const handleLogout = () => {
+    clearTokens();
+    setToken(null);
+    setUsername("");
+    setPassword("");
+  };
+
+  if (token) {
+    return <Dashboard onLogout={handleLogout} />;
   }
 
   return (
     <div style={styles.loginContainer}>
       <div style={styles.loginCard}>
-        <div style={styles.lockCircle}>
-          <span style={{ fontSize: 36 }}>🔒</span>
+        <div style={styles.logoCircle}>
+          <span style={{ fontSize: 32 }}>🤖</span>
         </div>
-        <h1 style={styles.title}>Sonia Yönetim Paneli</h1>
-        <p style={styles.subtitle}>
-          Devam etmek için şifrenizi girin.
-        </p>
+        <h1 style={styles.title}>Sonia Paneli</h1>
+        <p style={styles.subtitle}>Hesabınızla giriş yapın.</p>
         <form onSubmit={handleLogin} style={styles.form}>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Şifre"
-            style={styles.input}
-            autoFocus
-          />
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Kullanıcı Adı</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="kullanici_adi"
+              style={styles.input}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+          </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Şifre</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={styles.input}
+            />
+          </div>
           {error && <p style={styles.error}>{error}</p>}
-          <button type="submit" style={styles.button}>
-            Kilidi Aç
+          <button
+            type="submit"
+            style={{ ...styles.button, ...(loading ? styles.buttonDisabled : {}) }}
+            disabled={loading}
+          >
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
           </button>
         </form>
       </div>
@@ -72,7 +105,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     alignItems: "center",
   },
-  lockCircle: {
+  logoCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -80,13 +113,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 700,
     color: "#fff",
-    margin: "0 0 8px",
+    margin: "0 0 6px",
     textAlign: "center",
   },
   subtitle: {
@@ -99,7 +132,19 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 14,
+  },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "rgba(255,255,255,0.5)",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.7px",
   },
   input: {
     width: "100%",
@@ -121,7 +166,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: "#fff",
     cursor: "pointer",
-    transition: "opacity 0.2s",
+    marginTop: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
   },
   error: {
     color: "#EF4444",

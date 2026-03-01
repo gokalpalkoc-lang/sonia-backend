@@ -1,316 +1,363 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../config";
+import { fetchCommands, fetchLastCalled } from "../api";
+import { VAPI_API_KEY } from "../config";
 
 interface Command {
   assistantName: string;
   time: string;
-  prompt: string;
   assistantId: string | null;
 }
 
-interface CallRecord {
+interface VapiCall {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+  status: string;
+  transcript: string | null;
+  summary: string | null;
+}
+
+interface CallRow {
   assistantId: string;
   assistantName: string;
+  scheduledTime: string;
   lastCalledDate: string | null;
+  calls: VapiCall[];
+  loadingCalls: boolean;
+  expanded: boolean;
+  expandedCallId: string | null;
 }
 
 export default function CallsPage() {
-  const [commands, setCommands] = useState<Command[]>([]);
-  const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
+  const [rows, setRows] = useState<CallRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchData = async () => {
+  const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/commands`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const cmds: Command[] = data.commands ?? [];
-      setCommands(cmds);
-
-      // Fetch last-called date for each assistant
-      const records: CallRecord[] = await Promise.all(
-        cmds
-          .filter((cmd) => cmd.assistantId)
-          .map(async (cmd) => {
-            try {
-              const r = await fetch(
-                `${API_BASE_URL}/api/commands/last-called/${cmd.assistantId}`
-              );
-              const d = await r.json();
-              return {
-                assistantId: cmd.assistantId!,
-                assistantName: cmd.assistantName,
-                lastCalledDate: d.lastCalledDate ?? null,
-              };
-            } catch {
-              return {
-                assistantId: cmd.assistantId!,
-                assistantName: cmd.assistantName,
-                lastCalledDate: null,
-              };
-            }
-          })
+      const data = await fetchCommands();
+      const cmds: Command[] = (data.commands ?? []).filter(
+        (c: Command) => c.assistantId,
       );
-      setCallRecords(records);
+      const initial: CallRow[] = cmds.map((cmd) => ({
+        assistantId: cmd.assistantId!,
+        assistantName: cmd.assistantName,
+        scheduledTime: cmd.time,
+        lastCalledDate: null,
+        calls: [],
+        loadingCalls: false,
+        expanded: false,
+        expandedCallId: null,
+      }));
+      setRows(initial);
+
+      // Fetch last-called dates in parallel
+      const updated = await Promise.all(
+        initial.map(async (row) => {
+          try {
+            const d = await fetchLastCalled(row.assistantId);
+            return { ...row, lastCalledDate: d.lastCalledDate ?? null };
+          } catch {
+            return row;
+          }
+        }),
+      );
+      setRows(updated);
     } catch {
-      setError("Veriler yüklenemedi. Backend bağlantısını kontrol edin.");
+      setError("Veriler yüklenemedi.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return null;
+  const fetchCallsForRow = async (assistantId: string) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.assistantId === assistantId
+          ? { ...r, loadingCalls: true, expanded: true }
+          : r,
+      ),
+    );
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString("tr-TR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      });
+      const params = new URLSearchParams({ assistantId, limit: "10" });
+      const res = await fetch(
+        `https://api.vapi.ai/call?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${VAPI_API_KEY}` },
+        },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const calls: VapiCall[] = (Array.isArray(data) ? data : data.results ?? []).map(
+        (c: Record<string, unknown>) => {
+          const analysis = c.analysis as Record<string, unknown> | undefined;
+          return {
+            id: c.id as string,
+            startedAt: (c.startedAt || c.createdAt) as string,
+            endedAt: (c.endedAt as string) || null,
+            status: (c.status as string) || "unknown",
+            transcript: (c.transcript as string) || null,
+            summary: (analysis?.summary as string) || (c.summary as string) || null,
+          };
+        },
+      );
+      setRows((prev) =>
+        prev.map((r) =>
+          r.assistantId === assistantId
+            ? { ...r, calls, loadingCalls: false }
+            : r,
+        ),
+      );
     } catch {
-      return dateStr;
+      setRows((prev) =>
+        prev.map((r) =>
+          r.assistantId === assistantId
+            ? { ...r, loadingCalls: false }
+            : r,
+        ),
+      );
     }
   };
 
+  const toggleRow = (assistantId: string, row: CallRow) => {
+    if (!row.expanded) {
+      fetchCallsForRow(assistantId);
+    } else {
+      setRows((prev) =>
+        prev.map((r) =>
+          r.assistantId === assistantId ? { ...r, expanded: false } : r,
+        ),
+      );
+    }
+  };
+
+  const toggleTranscript = (assistantId: string, callId: string) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.assistantId === assistantId
+          ? { ...r, expandedCallId: r.expandedCallId === callId ? null : callId }
+          : r,
+      ),
+    );
+  };
+
+  const formatDate = (str: string | null) => {
+    if (!str) return null;
+    try {
+      return new Date(str).toLocaleString("tr-TR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return str;
+    }
+  };
+
+  const calledToday = (lastCalledDate: string | null) => {
+    if (!lastCalledDate) return false;
+    const today = new Date().toISOString().split("T")[0];
+    // Normalize to date-only for comparison (handles both "YYYY-MM-DD" and full ISO timestamps)
+    const callDate = lastCalledDate.split("T")[0];
+    return callDate === today;
+  };
+
+  const calledCount = rows.filter((r) => r.lastCalledDate).length;
+
   return (
     <div>
-      <div style={styles.header}>
+      <div style={s.header}>
         <div>
-          <h1 style={styles.pageTitle}>Aramalar</h1>
-          <p style={styles.pageSubtitle}>
-            Her asistanın en son arama tarihini görüntüleyin.
-          </p>
+          <h1 style={s.pageTitle}>Aramalar</h1>
+          <p style={s.pageSub}>Komut bazlı arama geçmişini ve transkriptleri görüntüleyin.</p>
         </div>
-        <button onClick={fetchData} style={styles.refreshButton}>
-          🔄 Yenile
-        </button>
+        <button onClick={loadData} style={s.ghostBtn}>🔄 Yenile</button>
       </div>
 
-      {loading ? (
-        <div style={styles.center}>
-          <p style={styles.mutedText}>Yükleniyor...</p>
-        </div>
-      ) : error ? (
-        <div style={styles.center}>
-          <p style={styles.errorText}>{error}</p>
-          <button onClick={fetchData} style={styles.refreshButton}>
-            Tekrar Dene
-          </button>
-        </div>
-      ) : callRecords.length === 0 ? (
-        <div style={styles.emptyState}>
-          <span style={{ fontSize: 48 }}>📞</span>
-          <p style={styles.emptyTitle}>Arama kaydı yok</p>
-          <p style={styles.mutedText}>
-            {commands.length === 0
-              ? "Henüz komut oluşturulmamış."
-              : "Asistan ID'si olan komut bulunamadı."}
-          </p>
-        </div>
-      ) : (
-        <div style={styles.grid}>
-          {callRecords.map((record) => (
-            <div key={record.assistantId} style={styles.card}>
-              <div style={styles.cardIcon}>📞</div>
-              <div style={styles.cardContent}>
-                <h3 style={styles.cardTitle}>{record.assistantName}</h3>
-                <p style={styles.assistantId}>{record.assistantId}</p>
-                <div style={styles.statusRow}>
-                  {record.lastCalledDate ? (
-                    <>
-                      <span style={styles.calledBadge}>✓ Arandı</span>
-                      <span style={styles.dateText}>
-                        {formatDate(record.lastCalledDate)}
-                      </span>
-                    </>
-                  ) : (
-                    <span style={styles.neverCalledBadge}>Henüz aranmadı</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* Summary */}
+      {!loading && !error && rows.length > 0 && (
+        <div style={s.statsRow}>
+          <div style={s.statCard}>
+            <span style={s.statNum}>{rows.length}</span>
+            <span style={s.statLbl}>Asistan</span>
+          </div>
+          <div style={s.statCard}>
+            <span style={{ ...s.statNum, color: "#22C55E" }}>{calledCount}</span>
+            <span style={s.statLbl}>Arama Yapıldı</span>
+          </div>
+          <div style={s.statCard}>
+            <span style={{ ...s.statNum, color: rows.length - calledCount > 0 ? "#EF4444" : "#22C55E" }}>
+              {rows.length - calledCount}
+            </span>
+            <span style={s.statLbl}>Aranmadı</span>
+          </div>
         </div>
       )}
 
-      {/* Summary stats */}
-      {!loading && !error && callRecords.length > 0 && (
-        <div style={styles.statsRow}>
-          <div style={styles.statCard}>
-            <span style={styles.statNumber}>{callRecords.length}</span>
-            <span style={styles.statLabel}>Toplam Asistan</span>
-          </div>
-          <div style={styles.statCard}>
-            <span style={styles.statNumber}>
-              {callRecords.filter((r) => r.lastCalledDate).length}
-            </span>
-            <span style={styles.statLabel}>Arama Yapıldı</span>
-          </div>
-          <div style={styles.statCard}>
-            <span style={styles.statNumber}>
-              {callRecords.filter((r) => !r.lastCalledDate).length}
-            </span>
-            <span style={styles.statLabel}>Henüz Aranmadı</span>
-          </div>
+      {loading ? (
+        <p style={s.muted}>Yükleniyor...</p>
+      ) : error ? (
+        <div style={{ textAlign: "center", paddingTop: 32 }}>
+          <p style={s.errTxt}>{error}</p>
+          <button onClick={loadData} style={s.ghostBtn}>Tekrar Dene</button>
+        </div>
+      ) : rows.length === 0 ? (
+        <div style={s.empty}>
+          <span style={{ fontSize: 44 }}>📞</span>
+          <p style={s.emptyTitle}>Henüz asistan yok</p>
+          <p style={s.muted}>Komutlar oluşturulduğunda burada görünür.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {rows.map((row) => (
+            <div key={row.assistantId} style={s.card}>
+              {/* Row header */}
+              <div style={s.rowHeader}>
+                <div style={s.rowLeft}>
+                  <span style={s.timeBadge}>{row.scheduledTime}</span>
+                  <span style={s.assistantName}>{row.assistantName}</span>
+                </div>
+                <div style={s.rowRight}>
+                  {row.lastCalledDate ? (
+                    <span style={calledToday(row.lastCalledDate) ? s.badgeGreen : s.badgeBlue}>
+                      {calledToday(row.lastCalledDate) ? "✓ Bugün arandı" : "✓ Arandı"}
+                    </span>
+                  ) : (
+                    <span style={s.badgeRed}>Henüz aranmadı</span>
+                  )}
+                  <button
+                    style={s.expandToggle}
+                    onClick={() => toggleRow(row.assistantId, row)}
+                  >
+                    {row.expanded ? "▲ Kapat" : "📋 Transkriptler"}
+                  </button>
+                </div>
+              </div>
+
+              {row.lastCalledDate && (
+                <p style={s.lastCalledText}>Son arama: {formatDate(row.lastCalledDate)}</p>
+              )}
+
+              {/* Call list */}
+              {row.expanded && (
+                <div style={s.callsContainer}>
+                  {row.loadingCalls ? (
+                    <p style={s.muted}>Aramalar yükleniyor...</p>
+                  ) : row.calls.length === 0 ? (
+                    <p style={s.muted}>Vapi'de arama kaydı bulunamadı.</p>
+                  ) : (
+                    row.calls.map((call) => (
+                      <div key={call.id} style={s.callItem}>
+                        <div style={s.callHeader}>
+                          <div style={s.callMeta}>
+                            <span style={getStatusStyle(call.status)}>{statusLabel(call.status)}</span>
+                            <span style={s.callDate}>{formatDate(call.startedAt)}</span>
+                            {call.endedAt && call.startedAt && (
+                              <span style={s.callDuration}>
+                                {Math.round(
+                                  (new Date(call.endedAt).getTime() -
+                                    new Date(call.startedAt).getTime()) / 1000,
+                                )}s
+                              </span>
+                            )}
+                          </div>
+                          {call.transcript && (
+                            <button
+                              style={s.transcriptToggle}
+                              onClick={() => toggleTranscript(row.assistantId, call.id)}
+                            >
+                              {row.expandedCallId === call.id ? "▲ Kapat" : "📄 Transkript"}
+                            </button>
+                          )}
+                        </div>
+                        {call.summary && (
+                          <p style={s.summary}><strong>Özet:</strong> {call.summary}</p>
+                        )}
+                        {row.expandedCallId === call.id && call.transcript && (
+                          <div style={s.transcriptBox}>
+                            <pre style={s.transcriptText}>{call.transcript}</pre>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 28,
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: "#fff",
-    margin: "0 0 4px",
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.4)",
-    margin: 0,
-  },
-  refreshButton: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 10,
-    padding: "10px 16px",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-    cursor: "pointer",
-  },
-  center: {
-    textAlign: "center",
-    padding: "60px 0",
-  },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "60px 0",
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 600,
-    color: "#fff",
-    margin: 0,
-  },
-  mutedText: {
-    color: "rgba(255,255,255,0.4)",
-    fontSize: 14,
-    margin: 0,
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 14,
-    margin: 0,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: 16,
-    marginBottom: 32,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 20,
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 14,
-  },
-  cardIcon: {
-    fontSize: 28,
-    flexShrink: 0,
-  },
-  cardContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    color: "#fff",
-    margin: "0 0 4px",
-  },
-  assistantId: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.25)",
-    margin: "0 0 12px",
-    fontFamily: "monospace",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  statusRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  calledBadge: {
-    backgroundColor: "rgba(34,197,94,0.15)",
-    color: "#22C55E",
-    fontSize: 12,
-    fontWeight: 600,
-    padding: "3px 10px",
-    borderRadius: 6,
-  },
-  neverCalledBadge: {
-    backgroundColor: "rgba(239,68,68,0.15)",
-    color: "#EF4444",
-    fontSize: 12,
-    fontWeight: 600,
-    padding: "3px 10px",
-    borderRadius: 6,
-  },
-  dateText: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
-  },
-  statsRow: {
-    display: "flex",
-    gap: 16,
-    flexWrap: "wrap",
-  },
-  statCard: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 12,
-    padding: "16px 24px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 4,
-    minWidth: 120,
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 700,
-    color: "#A5B4FC",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.5px",
-  },
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    ended: "Tamamlandı",
+    "in-progress": "Devam Ediyor",
+    queued: "Sırada",
+    failed: "Başarısız",
+    unknown: "Bilinmiyor",
+  };
+  return map[status] ?? status;
+}
+
+function getStatusStyle(status: string): React.CSSProperties {
+  const colors: Record<string, string> = {
+    ended: "rgba(34,197,94,0.15)",
+    "in-progress": "rgba(234,179,8,0.15)",
+    failed: "rgba(239,68,68,0.15)",
+  };
+  const text: Record<string, string> = {
+    ended: "#22C55E",
+    "in-progress": "#EAB308",
+    failed: "#EF4444",
+  };
+  const bg = colors[status] ?? "rgba(255,255,255,0.08)";
+  const color = text[status] ?? "rgba(255,255,255,0.5)";
+  return { backgroundColor: bg, color, fontSize: 12, fontWeight: 600, padding: "3px 9px", borderRadius: 6 };
+}
+
+const s: Record<string, React.CSSProperties> = {
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 },
+  pageTitle: { fontSize: 26, fontWeight: 700, color: "#fff", margin: "0 0 4px" },
+  pageSub: { fontSize: 14, color: "rgba(255,255,255,0.4)", margin: 0 },
+  ghostBtn: { backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.7)", cursor: "pointer" },
+  statsRow: { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 },
+  statCard: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 90 },
+  statNum: { fontSize: 28, fontWeight: 700, color: "#A5B4FC", lineHeight: 1 },
+  statLbl: { fontSize: 11, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.5px" } as React.CSSProperties,
+  muted: { color: "rgba(255,255,255,0.35)", fontSize: 14, textAlign: "center", paddingTop: 32 } as React.CSSProperties,
+  errTxt: { color: "#EF4444", fontSize: 14, margin: 0 },
+  empty: { display: "flex", flexDirection: "column", alignItems: "center", padding: "50px 0", gap: 10 },
+  emptyTitle: { fontSize: 17, fontWeight: 600, color: "#fff", margin: 0 },
+  card: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 18 },
+  rowHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 },
+  rowLeft: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  rowRight: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  timeBadge: { backgroundColor: "rgba(79,70,229,0.2)", color: "#A5B4FC", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 7 },
+  assistantName: { fontSize: 15, fontWeight: 600, color: "#fff" },
+  badgeGreen: { backgroundColor: "rgba(34,197,94,0.12)", color: "#22C55E", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 6 },
+  badgeBlue: { backgroundColor: "rgba(79,70,229,0.15)", color: "#A5B4FC", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 6 },
+  badgeRed: { backgroundColor: "rgba(239,68,68,0.12)", color: "#EF4444", fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 6 },
+  expandToggle: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "5px 12px", fontSize: 13, color: "rgba(255,255,255,0.7)", cursor: "pointer" },
+  lastCalledText: { fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "6px 0 0" },
+  callsContainer: { marginTop: 14, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 },
+  callItem: { backgroundColor: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 14px" },
+  callHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 },
+  callMeta: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  callDate: { fontSize: 13, color: "rgba(255,255,255,0.45)" },
+  callDuration: { fontSize: 12, color: "rgba(255,255,255,0.3)", backgroundColor: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 5 },
+  transcriptToggle: { background: "rgba(79,70,229,0.15)", border: "none", borderRadius: 7, padding: "4px 12px", fontSize: 12, color: "#A5B4FC", cursor: "pointer" },
+  summary: { fontSize: 13, color: "rgba(255,255,255,0.6)", margin: "8px 0 0", lineHeight: 1.5 },
+  transcriptBox: { marginTop: 10, backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "12px 14px", maxHeight: 300, overflowY: "auto" },
+  transcriptText: { fontSize: 13, color: "rgba(255,255,255,0.7)", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.6, fontFamily: "inherit" } as React.CSSProperties,
 };
