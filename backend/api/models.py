@@ -39,7 +39,7 @@ class AssistantCall(models.Model):
 
 class PushToken(models.Model):
     """Stores Expo push tokens for registered devices"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_tokens', null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_tokens')
     token = models.CharField(max_length=255, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
