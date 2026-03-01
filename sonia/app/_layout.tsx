@@ -44,16 +44,15 @@ function NavigationEffects() {
 
     // Handle cold-start: if the app was killed and user tapped a notification,
     // the tap listener won't fire. Check for the last notification response.
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        const data = response.notification.request.content.data ?? {};
-        openTalkAi({
-          screen: typeof data.screen === "string" ? data.screen : undefined,
-          assistantId:
-            typeof data.assistantId === "string" ? data.assistantId : undefined,
-        });
-      }
-    });
+    const response = Notifications.getLastNotificationResponse();
+    if (response) {
+      const data = response.notification.request.content.data ?? {};
+      openTalkAi({
+        screen: typeof data.screen === "string" ? data.screen : undefined,
+        assistantId:
+          typeof data.assistantId === "string" ? data.assistantId : undefined,
+      });
+    }
 
     const notificationTapSubscription = addNotificationTapListener(openTalkAi);
     const notificationReceivedSubscription = addNotificationReceivedListener(openTalkAi);
