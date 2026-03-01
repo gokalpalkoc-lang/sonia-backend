@@ -63,7 +63,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       <aside className={`sidebar${menuOpen ? " sidebar--open" : ""}`}>
         <div style={inlineS.sidebarHeader}>
           <div style={inlineS.logoCircle}>
-            <span>��</span>
+            <span>🤖</span>
           </div>
           <span style={inlineS.logoText}>Sonia Panel</span>
         </div>
