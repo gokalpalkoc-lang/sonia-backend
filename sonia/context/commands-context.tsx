@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api";
 import type { Command } from "@/types/command";
 import React, { createContext, useContext, useState } from "react";
 
@@ -21,8 +22,12 @@ export function CommandsProvider({ children }: { children: React.ReactNode }) {
       return exists ? prev : [...prev, cmd];
     });
 
-  const deleteCommand = (index: number) =>
+  const deleteCommand = (index: number) => {
     setCommands((prev) => prev.filter((_, i) => i !== index));
+    apiFetch(`/api/commands`, { method: "DELETE", body: JSON.stringify({ assistantId: commands[index]?.assistantId }) }).catch((error) => {
+      console.error(`Failed to delete command at index ${index}:`, error);
+    });
+  };
 
   const toggleExpand = (index: number) =>
     setCommands((prev) =>
