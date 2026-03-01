@@ -4,6 +4,7 @@ const VOICE_ID_KEY = "elevenlabs_voice_id";
 const VOICE_SETUP_DONE_KEY = "voice_setup_done";
 const ACCESS_TOKEN_KEY = "auth_access_token";
 const REFRESH_TOKEN_KEY = "auth_refresh_token";
+const PUSH_REGISTRATION_FINGERPRINT_KEY = "push_registration_fingerprint";
 const NATIVE_MODULE_NULL_MESSAGE = "Native module is null";
 
 const memoryStorage = new Map<string, string>();
@@ -84,6 +85,20 @@ export async function setAuthTokens(accessToken: string, refreshToken: string): 
 export async function clearAuthTokens(): Promise<void> {
   await removeItem(ACCESS_TOKEN_KEY);
   await removeItem(REFRESH_TOKEN_KEY);
+}
+
+export async function getPushRegistrationFingerprint(): Promise<string | null> {
+  return getItem(PUSH_REGISTRATION_FINGERPRINT_KEY);
+}
+
+export async function setPushRegistrationFingerprint(
+  fingerprint: string,
+): Promise<void> {
+  await setItem(PUSH_REGISTRATION_FINGERPRINT_KEY, fingerprint);
+}
+
+export async function clearPushRegistrationFingerprint(): Promise<void> {
+  await removeItem(PUSH_REGISTRATION_FINGERPRINT_KEY);
 }
 
 /** Attempt to refresh the access token using the stored refresh token */

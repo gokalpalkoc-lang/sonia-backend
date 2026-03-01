@@ -2,6 +2,10 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 
 import { apiFetch } from "@/lib/api";
+import {
+  getPushRegistrationFingerprint,
+  setPushRegistrationFingerprint,
+} from "@/lib/storage";
 import type { Command } from "@/types/command";
 
 export interface NotificationPayload {
@@ -46,7 +50,7 @@ Notifications.setNotificationHandler({
  * Register the device's Expo push token with the backend so it can
  * receive server-initiated push notifications.
  */
-export async function registerForPushNotifications() {
+export async function registerForPushNotifications(dedupeKey = "default") {
   const { granted } = await Notifications.requestPermissionsAsync();
   if (!granted) return null;
 
@@ -55,11 +59,23 @@ export async function registerForPushNotifications() {
     projectId ? { projectId } : undefined,
   );
 
+  const fingerprint = `${dedupeKey}:${tokenData.data}`;
+  const lastRegisteredFingerprint = await getPushRegistrationFingerprint();
+  if (lastRegisteredFingerprint === fingerprint) {
+    return tokenData.data;
+  }
+
   try {
-    await apiFetch('/api/register-push-token', {
+    const response = await apiFetch('/api/register-push-token', {
       method: "POST",
       body: JSON.stringify({ token: tokenData.data }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Push token registration failed with ${response.status}`);
+    }
+
+    await setPushRegistrationFingerprint(fingerprint);
   } catch (error) {
     console.warn("Failed to register push token with backend", error);
   }

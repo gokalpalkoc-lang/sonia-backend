@@ -2,9 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 import {
   clearAuthTokens,
+  clearPushRegistrationFingerprint,
   getAccessToken,
   setAuthTokens,
 } from "@/lib/storage";
+import { registerForPushNotifications } from "@/lib/notifications";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
@@ -59,6 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+
+    registerForPushNotifications(token).catch((error) => {
+      console.warn("Push token registration failed", error);
+    });
+  }, [token]);
+
   const login = async (username: string, password: string) => {
     const response = await fetch(`${BACKEND_URL}/api/auth/token`, {
       method: "POST",
@@ -107,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await clearAuthTokens();
+    await clearPushRegistrationFingerprint();
     setToken(null);
     setProfile(null);
   };
