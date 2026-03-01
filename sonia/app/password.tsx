@@ -10,7 +10,7 @@ export default function PasswordScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/login");
+    router.replace("/login?go=protected");
   }, [router]);
 
   return (

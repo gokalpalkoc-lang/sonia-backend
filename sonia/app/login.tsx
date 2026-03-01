@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { RelativePathString, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const { go } = useLocalSearchParams()
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +33,7 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(username.trim(), password);
-      router.replace("/");
+      router.replace(`/${go ?? 'protected'}` as RelativePathString);
     } catch (error: any) {
       Alert.alert("Giriş Başarısız", error.message || "Lütfen tekrar deneyin.");
     } finally {

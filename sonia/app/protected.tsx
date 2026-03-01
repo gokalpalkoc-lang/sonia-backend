@@ -109,7 +109,7 @@ export default function ProtectedScreen() {
 
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={handleLogout}
+          onPress={() => router.push("/")}
           activeOpacity={0.7}
         >
           <Text style={styles.logoutText}>Çıkış Yap</Text>
