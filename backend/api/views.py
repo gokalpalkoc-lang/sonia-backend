@@ -87,7 +87,7 @@ def profile(request):
 
 
 @csrf_exempt
-@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET", "POST", "DELETE"])
 @jwt_required
 def commands(request):
     """Handle GET and POST requests for commands"""
@@ -187,6 +187,25 @@ def commands(request):
         except Exception as e:
             logger.error(f'Error parsing command: {e}')
             return JsonResponse({'success': False, 'error': str(e)})
+    
+    if request.method == 'DELETE':
+        try:
+            data = json.loads(request.body)
+            assistant_id = data.get('assistantId')
+            if not assistant_id:
+                return JsonResponse({'success': False, 'error': 'assistantId eksik'}, status=400)
+
+            # Delete the command with the given assistant_id
+            try:
+                command = Command.objects.get(assistant_id=assistant_id)
+                command.delete()
+                logger.info(f'Deleted command with assistantId: {assistant_id}')
+                return JsonResponse({'success': True})
+            except Command.DoesNotExist:
+                logger.warning(f'Command with assistantId {assistant_id} does not exist')
+                return JsonResponse({'success': False, 'error': 'Komut bulunamadı'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
 
 
 @csrf_exempt
