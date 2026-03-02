@@ -6,7 +6,13 @@ import {
   getAccessToken,
   setAuthTokens,
 } from "@/lib/storage";
-import { registerForPushNotifications } from "@/lib/notifications";
+import {
+  registerForPushNotifications,
+  startCommandSyncService,
+  stopCommandSyncService,
+} from "@/lib/notifications";
+
+import * as TaskManager from "expo-task-manager";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
@@ -62,12 +68,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (isLoading) return;
+
+    if (!token) {
+      stopCommandSyncService().then(() => console.log("Command sync service stopped")).catch((err) =>
+        console.warn("Failed to stop command sync:", err),
+      );
+      return;
+    }
 
     registerForPushNotifications(token).catch((error) => {
       console.warn("Push token registration failed", error);
     });
-  }, [token]);
+    startCommandSyncService()
+      .then(() => TaskManager.getRegisteredTasksAsync())
+      .then((tasks) => {
+        console.log("Registered background tasks:", tasks);
+      })
+      .catch((err) =>
+        console.warn("Failed to start command sync:", err),
+      );
+
+    return () => {
+      stopCommandSyncService().catch((err) =>
+        console.warn("Failed to stop command sync:", err),
+      );
+    };
+  }, [token, isLoading]);
 
   const login = async (username: string, password: string) => {
     const response = await fetch(`${BACKEND_URL}/api/auth/token`, {
