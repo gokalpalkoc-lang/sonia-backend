@@ -16,7 +16,7 @@ function isMissingNativeStorage(error: unknown): boolean {
   );
 }
 
-async function getItem(key: string): Promise<string | null> {
+export async function getItem(key: string): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(key);
   } catch (error) {
@@ -28,7 +28,7 @@ async function getItem(key: string): Promise<string | null> {
   }
 }
 
-async function setItem(key: string, value: string): Promise<void> {
+export async function setItem(key: string, value: string): Promise<void> {
   try {
     await AsyncStorage.setItem(key, value);
   } catch (error) {

@@ -1,4 +1,6 @@
+import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
+import * as TaskManager from "expo-task-manager";
 import Constants from "expo-constants";
 
 import { apiFetch } from "@/lib/api";
@@ -7,6 +9,7 @@ import {
   setPushRegistrationFingerprint,
 } from "@/lib/storage";
 import type { Command } from "@/types/command";
+import { getItem, setItem } from "@/lib/storage";
 
 export interface NotificationPayload {
   screen?: string;
@@ -137,6 +140,85 @@ export async function scheduleCommandReminder(command: Command) {
       channelId: "commands",
     },
   });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Background sync – uses expo-background-task to poll for new       */
+/*  commands even when the app is not in the foreground.               */
+/* ------------------------------------------------------------------ */
+
+const COMMAND_SYNC_TASK = "com.bilisimcevre.sony.command-sync";
+
+async function syncCommandNotifications(): Promise<void> {
+  console.log("Running background command sync...");
+  getItem("last_command_sync_time").then((time) => console.log("Last sync time:", time));
+  getItem("last_command_sync_data").then((data) => console.log("Last sync data:", data));
+  const response = await apiFetch("/api/commands");
+  if (!response.ok) return;
+
+  // Store the current time as the last successful sync time
+  await setItem("last_command_sync_time", new Date().toISOString());
+  
+  const { commands: backendCommands } = (await response.json()) as {
+    commands: Command[];
+  };
+  
+  await setItem("last_command_sync_data", backendCommands.map(cmd => `${cmd.time} - ${cmd.prompt}`).join("\n"));
+
+  // Collect assistantIds that already have a pending local notification
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const scheduledIds = new Set(
+    scheduled
+      .map((n) => n.content.data?.assistantId)
+      .filter((id): id is string => typeof id === "string"),
+  );
+
+  // Schedule only for commands that are not yet in the notification queue
+  for (const cmd of backendCommands) {
+    if (cmd.assistantId && !scheduledIds.has(cmd.assistantId)) {
+      await scheduleCommandReminder({
+        time: cmd.time,
+        prompt: cmd.prompt,
+        assistantId: cmd.assistantId,
+        expanded: false,
+      });
+    }
+  }
+}
+
+// Must be defined at module (global) scope so the native task runner
+// can find it even when the app is launched headlessly in the background.
+TaskManager.defineTask(COMMAND_SYNC_TASK, async () => {
+  try {
+    await syncCommandNotifications();
+    return BackgroundTask.BackgroundTaskResult.Success;
+  } catch (error) {
+    console.warn("Background command sync failed:", error);
+    return BackgroundTask.BackgroundTaskResult.Failed;
+  }
+});
+
+export async function startCommandSyncService() {
+  // Run once immediately so the user doesn't wait for the first background cycle
+  syncCommandNotifications().catch((err) =>
+    console.warn("Initial command sync failed:", err),
+  );
+
+  const isRegistered =
+    await TaskManager.isTaskRegisteredAsync(COMMAND_SYNC_TASK);
+  if (isRegistered) return;
+
+  await BackgroundTask.registerTaskAsync(COMMAND_SYNC_TASK, {
+    minimumInterval: 15,
+  });
+}
+
+export async function stopCommandSyncService() {
+  const isRegistered =
+    await TaskManager.isTaskRegisteredAsync(COMMAND_SYNC_TASK);
+  if (!isRegistered) return;
+
+  await BackgroundTask.unregisterTaskAsync(COMMAND_SYNC_TASK);
 }
 
 export function addNotificationReceivedListener(

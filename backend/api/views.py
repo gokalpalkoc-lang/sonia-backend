@@ -268,7 +268,7 @@ def register_push_token(request):
             defaults={'user': request.user}
         )
         logger.info(f'Registered push token for user {request.user.username}: {token}')
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True}, status=201 if created else 200)
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
     except Exception as e:
