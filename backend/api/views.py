@@ -366,3 +366,66 @@ def voice_clone(request):
         logger.error(f'Error cloning voice: {e}')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def notify_by_uuid(request):
+    """Send push notification to a user identified by their notification_uuid.
+    This is a public endpoint designed for the AI module (no JWT required).
+    """
+    try:
+        data = json.loads(request.body)
+        notification_uuid = data.get('notification_uuid')
+        title = data.get('title', 'Sonia')
+        body = data.get('body', '')
+        extra_data = data.get('data', {"screen": "talk-ai"})
+
+        if not notification_uuid:
+            return JsonResponse({'success': False, 'error': 'notification_uuid eksik'}, status=400)
+
+        try:
+            profile = UserProfile.objects.get(notification_uuid=notification_uuid)
+        except UserProfile.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Geçersiz notification_uuid'}, status=404)
+
+        from .models import PushToken
+        tokens = list(PushToken.objects.filter(user=profile.user).values_list('token', flat=True))
+
+        if not tokens:
+            return JsonResponse({'success': False, 'error': 'Kayıtlı cihaz yok'}, status=404)
+
+        messages = [
+            {
+                'to': token,
+                'title': title,
+                'body': body,
+                'sound': 'default',
+                'data': extra_data,
+            }
+            for token in tokens
+        ]
+
+        import requests as http_requests
+        response = http_requests.post(
+            'https://exp.host/--/api/v2/push/send',
+            json=messages,
+            headers={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate',
+            },
+            timeout=30,
+        )
+
+        logger.info(f'Push via UUID sent to {len(tokens)} device(s) for user {profile.user.username}: {response.status_code}')
+        return JsonResponse({
+            'success': True,
+            'devicesNotified': len(tokens),
+            'expoResponse': response.json(),
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Geçersiz JSON'}, status=400)
+    except Exception as e:
+        logger.error(f'Error sending push via UUID: {e}')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+

@@ -18,6 +18,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
+import requests
+from dotenv import load_dotenv
+import os
 
 import numpy as np
 
@@ -38,6 +41,7 @@ try:
 except ImportError:
     DeepFace = None
 
+load_dotenv()
 
 @dataclass
 class Detection:
@@ -164,8 +168,28 @@ class FaceEmotionModule:
             )
         return frame_bgr
 
+def send_notification(name: str, notification_uuid: str, backend_url: str = "http://localhost:8000") -> None:
+    """Send a push notification to the user via their notification_uuid."""
+    try:
+        resp = requests.post(
+            f"{backend_url}/api/notify",
+            json={
+                "notification_uuid": notification_uuid,
+                "title": "Sonia AI",
+                "body": f"{name} algılandı",
+                "data": {"screen": "talk-ai"},
+            },
+            timeout=10,
+        )
+        if resp.ok:
+            print(f"[NOTIFY] Sent notification for '{name}'")
+        else:
+            print(f"[NOTIFY] Failed ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"[NOTIFY] Error: {e}")
 
-def run_webcam(known_faces_dir: Path, camera: int = 0) -> int:
+def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Optional[str] = None) -> int:
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
     module = FaceEmotionModule(known_faces_dir=known_faces_dir)
 
     cap = cv2.VideoCapture(camera)
@@ -183,6 +207,13 @@ def run_webcam(known_faces_dir: Path, camera: int = 0) -> int:
                 return 1
 
             detections = module.detect(frame)
+
+            # Send notification for known faces
+            if notification_uuid:
+                for det in detections:
+                    if det.name != "Unknown":
+                        send_notification(det.name, notification_uuid, backend_url)
+
             annotated = module.draw(frame, detections)
             cv2.imshow("Face Recognition + Emotion", annotated)
 
@@ -204,12 +235,22 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Folder with known face images named by person",
     )
     parser.add_argument("--camera", type=int, default=0, help="Camera index (default: 0)")
+    parser.add_argument(
+        "--notification-uuid",
+        type=str,
+        default=None,
+        help="16-char notification UUID from the admin panel (enables push notifications)",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
-    return run_webcam(known_faces_dir=args.known_faces_dir, camera=args.camera)
+    return run_webcam(
+        known_faces_dir=args.known_faces_dir,
+        camera=args.camera,
+        notification_uuid=args.notification_uuid,
+    )
 
 
 if __name__ == "__main__":
