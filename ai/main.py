@@ -1,5 +1,8 @@
 """Simple face recognition + emotion detection module.
 
+Uses temporal smoothing (majority vote over a sliding window) and
+confidence thresholding to produce stable, reliable emotion labels.
+
 Usage:
     python ai/main.py --known-faces-dir ai/known_faces --camera 0
 
@@ -14,10 +17,12 @@ Create known faces folder with images named like:
 from __future__ import annotations
 
 import argparse
+from collections import Counter, deque
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple
+import time
+from typing import Dict, List, Optional, Tuple
 import requests
 from dotenv import load_dotenv
 import os
@@ -43,23 +48,66 @@ except ImportError:
 
 load_dotenv()
 
+# ---------------------------------------------------------------------------
+# Configuration constants
+# ---------------------------------------------------------------------------
+EMOTION_WINDOW_SIZE = 10        # sliding window length for majority voting
+EMOTION_MIN_CONFIDENCE = 45.0   # minimum DeepFace score (0-100) to accept
+EMOTION_SAMPLE_INTERVAL = 3     # run DeepFace every N frames (skip in between)
+FACE_CROP_PADDING = 0.25        # expand face crop by 25 % on each side
+NOTIFICATION_EMOTIONS = {"sad", "fear", "angry", "surprised", "disgusted"}
+NOTIFICATION_COOLDOWN_SECS = 30
+
+
 @dataclass
 class Detection:
     name: str
     confidence: float
-    emotion: str
-    box: Tuple[int, int, int, int]  # top, right, bottom, left
+    emotion: str                            # smoothed / voted emotion
+    raw_emotion: str                        # per-frame DeepFace output
+    emotion_confidence: float               # DeepFace score for raw_emotion
+    box: Tuple[int, int, int, int]          # top, right, bottom, left
+
+
+class EmotionSmoother:
+    """Per-person sliding window majority voter."""
+
+    def __init__(self, window_size: int = EMOTION_WINDOW_SIZE) -> None:
+        self._windows: Dict[str, deque] = {}
+        self._window_size = window_size
+
+    def update(self, person: str, emotion: str) -> str:
+        if person not in self._windows:
+            self._windows[person] = deque(maxlen=self._window_size)
+        self._windows[person].append(emotion)
+        counts = Counter(self._windows[person])
+        return counts.most_common(1)[0][0]
+
+    def current(self, person: str) -> str:
+        window = self._windows.get(person)
+        if not window:
+            return "unknown"
+        return Counter(window).most_common(1)[0][0]
 
 
 class FaceEmotionModule:
-    def __init__(self, known_faces_dir: Path, tolerance: float = 0.5, scale: float = 0.25) -> None:
+    def __init__(
+        self,
+        known_faces_dir: Path,
+        tolerance: float = 0.6,
+        scale: float = 0.5,
+    ) -> None:
         self.known_faces_dir = known_faces_dir
         self.tolerance = tolerance
         self.scale = scale
         self.known_names: List[str] = []
         self.known_encodings: List[np.ndarray] = []
+        self.smoother = EmotionSmoother()
+        self._frame_counter = 0
+        self._cached_emotions: Dict[str, Tuple[str, float]] = {}  # name -> (emotion, conf)
         self._load_known_faces()
 
+    # ------------------------------------------------------------------
     def _load_known_faces(self) -> None:
         if not self.known_faces_dir.exists():
             print(f"[WARN] Known faces dir does not exist: {self.known_faces_dir}")
@@ -73,19 +121,34 @@ class FaceEmotionModule:
 
         for image_path in image_paths:
             image = face_recognition.load_image_file(str(image_path))
-            encodings = face_recognition.face_encodings(image)
+            encodings = face_recognition.face_encodings(image, num_jitters=10)
             if not encodings:
                 print(f"[WARN] No face found in {image_path.name}; skipping.")
                 continue
 
             self.known_encodings.append(encodings[0])
             self.known_names.append(image_path.stem)
+            print(f"[INFO] Enrolled '{image_path.stem}' from {image_path.name}")
 
         print(f"[INFO] Loaded {len(self.known_names)} known face(s).")
 
-    def _detect_emotion(self, face_bgr: np.ndarray) -> str:
+    # ------------------------------------------------------------------
+    def _padded_crop(self, frame: np.ndarray, top: int, right: int, bottom: int, left: int) -> np.ndarray:
+        """Return a face crop with extra padding for better emotion analysis."""
+        h, w = frame.shape[:2]
+        pad_x = int((right - left) * FACE_CROP_PADDING)
+        pad_y = int((bottom - top) * FACE_CROP_PADDING)
+        t = max(0, top - pad_y)
+        b = min(h, bottom + pad_y)
+        l = max(0, left - pad_x)
+        r = min(w, right + pad_x)
+        return frame[t:b, l:r]
+
+    # ------------------------------------------------------------------
+    def _detect_emotion(self, face_bgr: np.ndarray) -> Tuple[str, float]:
+        """Return (emotion, confidence_score_0_to_100)."""
         if DeepFace is None:
-            return "unknown"
+            return "unknown", 0.0
 
         try:
             result = DeepFace.analyze(
@@ -96,16 +159,27 @@ class FaceEmotionModule:
                 silent=True,
             )
         except Exception:
-            return "unknown"
+            return "unknown", 0.0
 
         if isinstance(result, list):
             if not result:
-                return "unknown"
+                return "unknown", 0.0
             result = result[0]
 
-        return str(result.get("dominant_emotion", "unknown"))
+        dominant = str(result.get("dominant_emotion", "unknown"))
+        scores = result.get("emotion", {})
+        conf = float(scores.get(dominant, 0.0))
 
+        if conf < EMOTION_MIN_CONFIDENCE:
+            return "unknown", conf
+
+        return dominant, conf
+
+    # ------------------------------------------------------------------
     def detect(self, frame_bgr: np.ndarray) -> List[Detection]:
+        self._frame_counter += 1
+        run_emotion = (self._frame_counter % EMOTION_SAMPLE_INTERVAL) == 0
+
         small_frame = cv2.resize(frame_bgr, (0, 0), fx=self.scale, fy=self.scale)
         rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
@@ -116,36 +190,53 @@ class FaceEmotionModule:
 
         for encoding, (top, right, bottom, left) in zip(encodings, locations):
             name = "Unknown"
-            confidence = 0.0
+            face_confidence = 0.0
 
             if self.known_encodings:
                 distances = face_recognition.face_distance(self.known_encodings, encoding)
                 best_idx = int(np.argmin(distances))
                 best_distance = float(distances[best_idx])
+                print(f"[DEBUG] Best match: {self.known_names[best_idx]} dist={best_distance:.3f} (tol={self.tolerance})")
 
                 if best_distance <= self.tolerance:
                     name = self.known_names[best_idx]
-                    confidence = max(0.0, 1.0 - best_distance)
+                    face_confidence = max(0.0, 1.0 - best_distance)
 
+            # Scale back to original frame coordinates
             top = int(top / self.scale)
             right = int(right / self.scale)
             bottom = int(bottom / self.scale)
             left = int(left / self.scale)
 
-            face_crop = frame_bgr[max(0, top):max(0, bottom), max(0, left):max(0, right)]
-            emotion = self._detect_emotion(face_crop) if face_crop.size > 0 else "unknown"
+            # Emotion detection (with frame skipping + caching)
+            person_key = name if name != "Unknown" else f"unk_{left}_{top}"
+            raw_emotion, emotion_conf = "neutral", 0.0
+
+            if run_emotion:
+                face_crop = self._padded_crop(frame_bgr, top, right, bottom, left)
+                if face_crop.size > 0:
+                    raw_emotion, emotion_conf = self._detect_emotion(face_crop)
+                self._cached_emotions[person_key] = (raw_emotion, emotion_conf)
+            else:
+                raw_emotion, emotion_conf = self._cached_emotions.get(person_key, ("unknown", 0.0))
+
+            # Feed into sliding-window smoother
+            smoothed = self.smoother.update(person_key, raw_emotion)
 
             detections.append(
                 Detection(
                     name=name,
-                    confidence=confidence,
-                    emotion=emotion,
+                    confidence=face_confidence,
+                    emotion=smoothed,
+                    raw_emotion=raw_emotion,
+                    emotion_confidence=emotion_conf,
                     box=(top, right, bottom, left),
                 )
             )
 
         return detections
 
+    # ------------------------------------------------------------------
     @staticmethod
     def draw(frame_bgr: np.ndarray, detections: List[Detection]) -> np.ndarray:
         for det in detections:
@@ -168,26 +259,42 @@ class FaceEmotionModule:
             )
         return frame_bgr
 
-def send_notification(name: str, notification_uuid: str, backend_url: str = "http://localhost:8000") -> None:
-    """Send a push notification to the user via their notification_uuid."""
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+_last_notification_time = time.time() - NOTIFICATION_COOLDOWN_SECS
+
+
+def send_notification(name: str, notification_uuid: str, emotion: str, backend_url: str = "http://localhost:8000") -> None:
+    """Send a push notification only if the cooldown has elapsed."""
+    global _last_notification_time
+    if time.time() - _last_notification_time < NOTIFICATION_COOLDOWN_SECS:
+        return
     try:
         resp = requests.post(
             f"{backend_url}/api/notify",
             json={
                 "notification_uuid": notification_uuid,
-                "title": "Sonia AI",
-                "body": f"{name} algılandı",
+                "title": "Sonia",
+                "body": f"{emotion} algılandı",
                 "data": {"screen": "talk-ai"},
             },
             timeout=10,
         )
         if resp.ok:
-            print(f"[NOTIFY] Sent notification for '{name}'")
+            print(f"[NOTIFY] Sent notification for '{name}' — {emotion}")
         else:
             print(f"[NOTIFY] Failed ({resp.status_code}): {resp.text}")
     except Exception as e:
         print(f"[NOTIFY] Error: {e}")
+    finally:
+        _last_notification_time = time.time()
 
+
+# ---------------------------------------------------------------------------
+# Main loop
+# ---------------------------------------------------------------------------
 def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Optional[str] = None) -> int:
     backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
     module = FaceEmotionModule(known_faces_dir=known_faces_dir)
@@ -198,6 +305,7 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
         return 1
 
     print("[INFO] Press 'q' to quit.")
+    prev_smoothed: Dict[str, str] = {}
 
     try:
         while True:
@@ -208,11 +316,20 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
 
             detections = module.detect(frame)
 
-            # Send notification for known faces
-            if notification_uuid:
-                for det in detections:
-                    if det.name != "Unknown":
-                        send_notification(det.name, notification_uuid, backend_url)
+            for det in detections:
+                person_key = det.name if det.name != "Unknown" else f"unk_{det.box[3]}_{det.box[0]}"
+                prev = prev_smoothed.get(person_key)
+                if prev != det.emotion and det.emotion != "unknown":
+                    print(f"[INFO] {det.name}: {det.emotion} (conf {det.emotion_confidence:.0f}%)")
+                prev_smoothed[person_key] = det.emotion
+
+                # Notify only for known faces with a stable negative emotion
+                if (
+                    notification_uuid
+                    and det.name != "Unknown"
+                    and det.emotion in NOTIFICATION_EMOTIONS
+                ):
+                    send_notification(det.name, notification_uuid, det.emotion, backend_url)
 
             annotated = module.draw(frame, detections)
             cv2.imshow("Face Recognition + Emotion", annotated)
@@ -228,10 +345,11 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Simple face recognition and emotion detection")
+    _script_dir = Path(__file__).resolve().parent
     parser.add_argument(
         "--known-faces-dir",
         type=Path,
-        default=Path("ai/known_faces"),
+        default=_script_dir / "known_faces",
         help="Folder with known face images named by person",
     )
     parser.add_argument("--camera", type=int, default=0, help="Camera index (default: 0)")
