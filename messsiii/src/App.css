@@ -1,335 +1,110 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+﻿:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #0f172a;
+  --accent-hover: #1f2937;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+* {
+  box-sizing: border-box;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.app-shell {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-/* Header Styles */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+.panel {
+  width: min(100%, 420px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
 }
 
 .header h1 {
   margin: 0;
   font-size: 1.5rem;
+  letter-spacing: -0.02em;
 }
 
-.toggle-button {
-  background-color: #646cff;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.toggle-button:hover {
-  background-color: #535bf2;
-}
-
-/* Form Styles */
-.form-group {
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #646cff;
-  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
-}
-
-/* Assistant Select */
-.assistant-select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-family: inherit;
-  background-color: white;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.assistant-select:focus {
-  outline: none;
-  border-color: #646cff;
-  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.2);
-}
-
-.refresh-button {
-  background-color: #ff9800;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-.refresh-button:hover:not(:disabled) {
-  background-color: #f57c00;
-}
-
-.refresh-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-/* Call Section */
-.call-section {
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-/* Assistant Creator */
-.assistant-creator {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 2rem;
-  background: #f9f9f9;
-  border-radius: 8px;
-}
-
-.assistant-creator h2 {
-  margin-bottom: 1.5rem;
-  color: #333;
-}
-
-.create-button {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  margin-top: 1rem;
-}
-
-.create-button:hover:not(:disabled) {
-  background-color: #45a049;
-}
-
-.create-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-/* Messages */
-.error-message {
-  color: #f44336;
-  background-color: #ffebee;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin: 1rem 0;
-}
-
-.success-message {
-  color: #4CAF50;
-  background-color: #e8f5e9;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-top: 1rem;
-}
-
-.success-message .hint {
-  color: #666;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-/* Commands from Sonia */
-.commands-section {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: #f0f4ff;
-  border-radius: 8px;
-  text-align: left;
-}
-
-.commands-section h2 {
-  margin: 0 0 1rem 0;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-.no-commands {
-  color: #666;
-  font-style: italic;
-  text-align: center;
-}
-
-.commands-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.command-card {
-  background: white;
-  padding: 1rem;
-  border-radius: 6px;
-  border-left: 4px solid #646cff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.command-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.command-name {
-  font-weight: 600;
-  color: #333;
-  font-size: 1rem;
-}
-
-.command-time {
-  display: inline-block;
-  background: #e8eaf6;
-  color: #5c6bc0;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.command-prompt {
-  margin: 0;
-  color: #333;
+.header p {
+  margin: 8px 0 0;
+  color: var(--muted);
   font-size: 0.95rem;
-  line-height: 1.4;
 }
 
-.command-first-message {
-  margin: 0.5rem 0 0 0;
-  color: #0066cc;
+.assistant-info {
+  display: none;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fcfcfd;
+}
+
+.call-card {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fcfcfd;
+}
+
+.call-button {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: var(--accent);
+  transition: background-color 0.18s ease, opacity 0.18s ease;
+}
+
+.call-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.call-button.danger {
+  background: var(--danger);
+}
+
+.call-button.danger:hover {
+  background: var(--danger-hover);
+}
+
+.call-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.status-text {
+  margin: 12px 0 0;
+  color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.4;
-  padding: 0.5rem;
-  background: #f0f7ff;
-  border-radius: 4px;
+  overflow-wrap: anywhere;
 }
 
-.command-id {
-  margin: 0.5rem 0 0 0;
-  color: #666;
-  font-size: 0.8rem;
-  font-family: monospace;
-}
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 16px;
+  }
 
-.command-auto-call {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #eee;
-}
-
-.auto-call-status {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.auto-call-status.pending {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.auto-call-status.called {
-  background: #d4edda;
-  color: #155724;
-}
-
-.commands-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.commands-header h2 {
-  margin: 0;
-}
-
-.check-time-button {
-  background: #ffc107;
-  color: #333;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.check-time-button:hover {
-  background: #e0a800;
+  .panel {
+    padding: 18px;
+    border-radius: 12px;
+  }
 }

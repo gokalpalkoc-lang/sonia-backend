@@ -2,7 +2,8 @@
 // Replace these values with your own keys
 
 export const VAPI_PUBLIC_KEY = "23ae90c6-aed9-4b02-b6bb-efb94a9ba2d1";
-export const ASSISTANT_ID = "2135f31f-5c85-4517-9574-571a1b1d0e38";
+export const ASSISTANT_ID =
+  import.meta.env.VITE_ASSISTANT_ID || "2135f31f-5c85-4517-9574-571a1b1d0e38";
 
 // API key for creating assistants via Vapi API (server-side)
 // This should be kept secret and not exposed in frontend for production
