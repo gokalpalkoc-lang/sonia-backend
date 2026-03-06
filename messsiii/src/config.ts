@@ -15,6 +15,3 @@ export const API_BASE_URL =
 
 // Default model to use for new assistants
 export const DEFAULT_MODEL = "gpt-5-mini";
-
-// ElevenLabs is integrated through Vapi dashboard
-// Add your ElevenLabs voice ID when creating an assistant
