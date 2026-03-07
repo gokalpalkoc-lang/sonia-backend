@@ -28,8 +28,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     voice_id = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     patient_name = serializers.CharField(allow_blank=True, required=False)
+    notification_uuid = serializers.CharField(read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ['username', 'patient_name', 'voice_id', 'created_at']
-        read_only_fields = ['username', 'created_at']
+        fields = ['username', 'patient_name', 'voice_id', 'notification_uuid', 'created_at']
+        read_only_fields = ['username', 'notification_uuid', 'created_at']

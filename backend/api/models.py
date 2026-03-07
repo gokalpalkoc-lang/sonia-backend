@@ -1,5 +1,12 @@
+import uuid
+
 from django.contrib.auth.models import User
 from django.db import models
+
+
+def generate_notification_uuid():
+    """Generate a 16-character hex UUID for notification routing."""
+    return uuid.uuid4().hex[:16]
 
 
 class UserProfile(models.Model):
@@ -7,6 +14,10 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     patient_name = models.CharField(max_length=255, blank=True, default='')
     voice_id = models.CharField(max_length=255, blank=True, null=True)
+    notification_uuid = models.CharField(
+        max_length=16, unique=True, default=generate_notification_uuid,
+        help_text='16-char hex ID used by the AI module to send push notifications'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

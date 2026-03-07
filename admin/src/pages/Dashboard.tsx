@@ -21,12 +21,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [patientName, setPatientName] = useState("");
   const [username, setUsername] = useState("");
+  const [notificationUuid, setNotificationUuid] = useState("");
 
   useEffect(() => {
     fetchProfile()
       .then((data) => {
         setPatientName(data.profile?.patient_name || "");
         setUsername(data.profile?.username || "");
+        setNotificationUuid(data.profile?.notification_uuid || "");
       })
       .catch(() => {});
   }, []);
@@ -76,6 +78,24 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div style={{ minWidth: 0 }}>
               <div style={inlineS.userName}>{patientName || username}</div>
               {patientName && <div style={inlineS.userHandle}>@{username}</div>}
+            </div>
+          </div>
+        )}
+
+        {notificationUuid && (
+          <div style={inlineS.uuidBox}>
+            <div style={inlineS.uuidLabel}>AI Bildirim ID</div>
+            <div style={inlineS.uuidRow}>
+              <code style={inlineS.uuidCode}>{notificationUuid}</code>
+              <button
+                style={inlineS.copyBtn}
+                title="Kopyala"
+                onClick={() => {
+                  navigator.clipboard.writeText(notificationUuid);
+                }}
+              >
+                📋
+              </button>
             </div>
           </div>
         )}
@@ -186,6 +206,46 @@ const inlineS: Record<string, React.CSSProperties> = {
   userHandle: {
     fontSize: 11,
     color: "rgba(255,255,255,0.4)",
+  },
+  uuidBox: {
+    marginBottom: 16,
+    padding: "10px 10px",
+    backgroundColor: "rgba(79,70,229,0.08)",
+    border: "1px solid rgba(79,70,229,0.2)",
+    borderRadius: 10,
+  },
+  uuidLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    color: "rgba(255,255,255,0.4)",
+    textTransform: "uppercase",
+    letterSpacing: "0.6px",
+    marginBottom: 6,
+  } as React.CSSProperties,
+  uuidRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  uuidCode: {
+    fontSize: 12,
+    fontFamily: "'Courier New', monospace",
+    color: "#A5B4FC",
+    letterSpacing: "0.5px",
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } as React.CSSProperties,
+  copyBtn: {
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 6,
+    padding: "4px 6px",
+    cursor: "pointer",
+    fontSize: 13,
+    lineHeight: 1,
+    flexShrink: 0,
   },
   navBtn: {
     display: "flex",

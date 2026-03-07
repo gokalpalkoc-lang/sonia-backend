@@ -34,5 +34,6 @@ urlpatterns = [
     # Public endpoints (no auth required)
     path('api/commands/called', views.update_called, name='update_called'),
     path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
+    path('api/notify', views.notify_by_uuid, name='notify_by_uuid'),
 ]
 
