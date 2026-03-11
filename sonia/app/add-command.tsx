@@ -117,16 +117,16 @@ export default function AddCommandScreen() {
         contentContainerStyle={[styles.inner, { paddingTop: insets.top + 24 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Yeni Komut</Text>
+        <Text style={styles.title}>New Command</Text>
         <Text style={styles.subtitle}>
-          Komut için bir asistan adı, saat, sistem istemi ve ilk mesaj belirleyin.
+          Determine assistant name, time, system prompt and a first message for the command.
         </Text>
 
         {/* Asistan Adı */}
-        <Text style={styles.label}>Asistan Adı</Text>
+        <Text style={styles.label}>Assistant Name</Text>
         <TextInput
           style={styles.input}
-          placeholder="ör. Benim Asistanım"
+          placeholder="eg. My Assistant..."
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={assistantName}
           onChangeText={setAssistantName}
@@ -134,7 +134,7 @@ export default function AddCommandScreen() {
         />
 
         {/* Saat */}
-        <Text style={styles.label}>Saat</Text>
+        <Text style={styles.label}>Time</Text>
         <TextInput
           style={styles.input}
           placeholder="HH:MM"
@@ -145,10 +145,10 @@ export default function AddCommandScreen() {
         />
 
         {/* Prompt (Sistem İstemi) */}
-        <Text style={styles.label}>Sistem İstemi</Text>
+        <Text style={styles.label}>System Prompt</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Komutu açıklayın..."
+          placeholder="Explain the command..."
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={promptInput}
           onChangeText={setPromptInput}
@@ -157,10 +157,10 @@ export default function AddCommandScreen() {
         />
 
         {/* İlk Mesaj */}
-        <Text style={styles.label}>İlk Mesaj</Text>
+        <Text style={styles.label}>First Message</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          placeholder="Asistan önce ne söylemeli?"
+          placeholder="What should assistant say first?"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={firstMessageInput}
           onChangeText={setFirstMessageInput}
@@ -178,7 +178,7 @@ export default function AddCommandScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? "Oluşturuluyor..." : "Asistan Oluştur"}
+            {isLoading ? "Creating..." : "Create Assistant"}
           </Text>
         </TouchableOpacity>
 
@@ -187,7 +187,7 @@ export default function AddCommandScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.cancelText}>İptal</Text>
+          <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

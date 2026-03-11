@@ -41,7 +41,7 @@ export default function ProtectedScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Komutlar</Text>
+        <Text style={styles.title}>Commands
         <Text style={styles.badge}>{commands.length}</Text>
       </View>
 
@@ -54,9 +54,9 @@ export default function ProtectedScreen() {
         {commands.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>Henüz komut yok</Text>
+            <Text style={styles.emptyTitle}>No command yet
             <Text style={styles.emptyText}>
-              İlk komutunuzu oluşturmak için "Komut Ekle"ye dokunun.
+              Click "Add Command" to create your first command.
             </Text>
           </View>
         )}
@@ -89,7 +89,7 @@ export default function ProtectedScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.expandText}>
-                  {cmd.expanded ? "Daha az göster ▲" : "Daha fazla göster ▼"}
+                  {cmd.expanded ? "Show less ▲" : "Show more ▼"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -104,7 +104,7 @@ export default function ProtectedScreen() {
           onPress={() => router.push("/add-command")}
           activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+ Komut Ekle</Text>
+          <Text style={styles.addButtonText}>+ Add command</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -112,7 +112,7 @@ export default function ProtectedScreen() {
           onPress={() => router.push("/")}
           activeOpacity={0.7}
         >
-          <Text style={styles.logoutText}>Çıkış Yap</Text>
+          <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </View>
     </View>

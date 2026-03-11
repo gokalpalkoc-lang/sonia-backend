@@ -57,8 +57,8 @@ export default function VoiceSetupScreen() {
     const status = await AudioModule.requestRecordingPermissionsAsync();
     if (!status.granted) {
       Alert.alert(
-        "İzin Gerekli",
-        "Sesinizi klonlamak için mikrofon erişimi gerekiyor.",
+        "Permission Required",
+        "Microphone access required to clone your voice. .",
       );
       return;
     }
@@ -70,7 +70,7 @@ export default function VoiceSetupScreen() {
       setPhase("recording");
     } catch (error) {
       console.error("Recording start failed:", error);
-      Alert.alert("Hata", "Kayıt başlatılamadı. Lütfen tekrar deneyin.");
+      Alert.alert("Error", "Recording wasn't successful. Please try again.");
       setPhase("idle");
       return;
     }
@@ -99,7 +99,7 @@ export default function VoiceSetupScreen() {
       await recorder.stop();
     } catch (error) {
       console.error("Recording stop failed:", error);
-      Alert.alert("Hata", "Kayıt tamamlanamadı. Lütfen tekrar deneyin.");
+      Alert.alert("Error", "Recording wasn't successful. Please try again.");
       setPhase("idle");
       return;
     }
@@ -107,7 +107,7 @@ export default function VoiceSetupScreen() {
 
     const uri = await waitForRecordingUri();
     if (!uri) {
-      Alert.alert("Hata", "Kayıt başarısız oldu — ses dosyası oluşturulamadı.");
+      Alert.alert("Error", "Recording was failed — voice file couldn't be created.");
       setPhase("idle");
       return;
     }
@@ -141,16 +141,16 @@ export default function VoiceSetupScreen() {
         }, 1200);
       } else {
         Alert.alert(
-          "Klonlama Başarısız",
-          data.error || "Sesiniz klonlanırken bir hata oluştu.",
+          "Cloning failed",
+          data.error || "There was an error with cloning your voice..",
         );
         setPhase("idle");
       }
     } catch (error) {
       console.error("Voice clone upload error:", error);
       Alert.alert(
-        "Ağ Hatası",
-        "Sunucuya ulaşılamadı. Lütfen bağlantınızı kontrol edip tekrar deneyin.",
+        "Connection Error",
+        "Couldn't access the server. Please check your connection and try again.",
       );
       setPhase("idle");
     }
@@ -165,9 +165,9 @@ export default function VoiceSetupScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
       {/* Title */}
-      <Text style={styles.title}>Ses Kurulumu</Text>
+      <Text style={styles.title}>Voice Setup</Text>
       <Text style={styles.subtitle}>
-        Size özel bir yapay zekâ ses klonu oluşturabilmemiz için sesinizi 30 saniye kaydedin.
+        Record your voice for 30 seconds in order for us to create you an artifical intelligence voice clone.
       </Text>
 
       {/* Center area */}
@@ -181,7 +181,7 @@ export default function VoiceSetupScreen() {
             >
               <Text style={styles.micIcon}>🎙️</Text>
             </TouchableOpacity>
-            <Text style={styles.hint}>Kaydı başlatmak için dokunun</Text>
+            <Text style={styles.hint}>Click to start recording</Text>
           </>
         )}
 
@@ -191,7 +191,7 @@ export default function VoiceSetupScreen() {
             <View style={styles.recordingRing}>
               <Text style={styles.countdownText}>{countdown}s</Text>
             </View>
-            <Text style={styles.recordingLabel}>Kaydediliyor…</Text>
+            <Text style={styles.recordingLabel}>Saving…</Text>
             {/* Progress bar */}
             <View style={styles.progressBarBg}>
               <View
@@ -202,7 +202,7 @@ export default function VoiceSetupScreen() {
               />
             </View>
             <Text style={styles.hint}>
-              Doğal konuşun — bir şeyi sesli okuyun ya da gününüzden bahsedin.
+              Speak naturally — read something out loud or talk about your day.
             </Text>
           </>
         )}
@@ -211,16 +211,16 @@ export default function VoiceSetupScreen() {
           <>
             <ActivityIndicator size="large" color="#4F46E5" />
             <Text style={styles.uploadingLabel}>
-              Sesiniz yükleniyor ve klonlanıyor…
+              Your voice is being uploaded and cloned…
             </Text>
-            <Text style={styles.hint}>Bu işlem biraz sürebilir.</Text>
+            <Text style={styles.hint}>This might take a while.</Text>
           </>
         )}
 
         {phase === "done" && (
           <>
             <Text style={styles.doneIcon}>✅</Text>
-            <Text style={styles.doneLabel}>Ses başarıyla klonlandı!</Text>
+            <Text style={styles.doneLabel}>Voice successfully cloned!</Text>
           </>
         )}
       </View>

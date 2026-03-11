@@ -26,7 +26,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert("Eksik Bilgi", "Lütfen kullanıcı adı ve şifreyi girin.");
+      Alert.alert("Missing Data", "Please enter username and password.");
       return;
     }
 
@@ -35,7 +35,7 @@ export default function LoginScreen() {
       await login(username.trim(), password);
       router.replace(`/${go ?? 'protected'}` as RelativePathString);
     } catch (error: any) {
-      Alert.alert("Giriş Başarısız", error.message || "Lütfen tekrar deneyin.");
+      Alert.alert("Access denied.", error.message || "Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -52,11 +52,11 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.title}>Giriş Yap</Text>
-        <Text style={styles.subtitle}>Hesabınıza giriş yapın.</Text>
+        <Text style={styles.subtitle}>Log into your account.</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Kullanıcı Adı"
+          placeholder="Username"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={username}
           onChangeText={setUsername}
@@ -67,7 +67,7 @@ export default function LoginScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Şifre"
+          placeholder="Password"
           placeholderTextColor="rgba(255,255,255,0.3)"
           secureTextEntry
           value={password}
@@ -83,7 +83,7 @@ export default function LoginScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
+            {isLoading ? "Logging in..." : "Log in."}
           </Text>
         </TouchableOpacity>
 
@@ -93,8 +93,8 @@ export default function LoginScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.registerText}>
-            Hesabınız yok mu?{" "}
-            <Text style={styles.registerLink}>Kayıt Ol</Text>
+            Do you not have an account?{" "}
+            <Text style={styles.registerLink}>Sign up</Text>
           </Text>
         </TouchableOpacity>
       </View>

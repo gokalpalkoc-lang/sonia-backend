@@ -109,8 +109,8 @@ export default function TalkAIScreen() {
 
       if (!status.granted) {
         Alert.alert(
-          "Mikrofon İzni Gerekli",
-          "Yapay zekâ ile sesli konuşabilmek için mikrofon erişimine izin vermelisiniz.",
+          "Access to Microphone required",
+          "You need to give access to microphone in order to talk with artificial intelligence.",
         );
       }
     } catch (error) {
@@ -205,9 +205,9 @@ export default function TalkAIScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>← Geri</Text>
+          <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>✦ Yapay Zekâ ile Konuş</Text>
+        <Text style={styles.headerTitle}>✦ Talk with Artificial Intelligence</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -229,22 +229,22 @@ export default function TalkAIScreen() {
           renderLoading={() => (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4F46E5" />
-              <Text style={styles.loadingText}>Yapay zekâ ekranı yükleniyor...</Text>
+              <Text style={styles.loadingText}>Artifical Intelligence screen loading...</Text>
             </View>
           )}
         />
       ) : (
         <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Mikrofon izni bekleniyor</Text>
+          <Text style={styles.permissionTitle}>Waiting for microphone access</Text>
           <Text style={styles.permissionText}>
-            Yapay zekâ ile konuşmak için mikrofon erişimi zorunludur.
+            Microphone Access is required in order to talk with Artificial Intelligence.
           </Text>
           <TouchableOpacity
             style={styles.permissionButton}
             onPress={requestMicPermission}
             activeOpacity={0.8}
           >
-            <Text style={styles.permissionButtonText}>Mikrofon İznini Ver</Text>
+            <Text style={styles.permissionButtonText}>Give Microphone Access</Text>
           </TouchableOpacity>
         </View>
       )}

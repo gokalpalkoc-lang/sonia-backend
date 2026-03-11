@@ -165,7 +165,7 @@ function App() {
     <main className="app-shell">
       <section className="panel">
         <header className="header">
-          <h1>Telefon et</h1>
+          <h1>Phone</h1>
         </header>
 
         <div className="assistant-info">

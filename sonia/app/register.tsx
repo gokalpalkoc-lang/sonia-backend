@@ -26,11 +26,11 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert("Eksik Bilgi", "Lütfen kullanıcı adı ve şifreyi girin.");
+      Alert.alert("Missing data", "Please enter username and password.");
       return;
     }
     if (password.length < 8) {
-      Alert.alert("Zayıf Şifre", "Şifre en az 8 karakter olmalıdır.");
+      Alert.alert("Weak password", "The password must be at least 8 characters long.");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function RegisterScreen() {
       await register(username.trim(), password, patientName.trim());
       router.replace("/");
     } catch (error: any) {
-      Alert.alert("Kayıt Başarısız", error.message || "Lütfen tekrar deneyin.");
+      Alert.alert("Sign up failed", error.message || "Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -54,15 +54,15 @@ export default function RegisterScreen() {
         contentContainerStyle={[styles.inner, { paddingTop: insets.top + 40 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Hesap Oluştur</Text>
+        <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>
-          Yeni bir hesap oluşturun.
+          Create a new account.
         </Text>
 
-        <Text style={styles.label}>Kullanıcı Adı</Text>
+        <Text style={styles.label}>Username</Text>
         <TextInput
           style={styles.input}
-          placeholder="ör. bakici_ali"
+          placeholder="eg. bakici_ali"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={username}
           onChangeText={setUsername}
@@ -71,20 +71,20 @@ export default function RegisterScreen() {
           autoFocus
         />
 
-        <Text style={styles.label}>Şifre</Text>
+        <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
-          placeholder="En az 8 karakter"
+          placeholder="At least 8 characters"
           placeholderTextColor="rgba(255,255,255,0.3)"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
 
-        <Text style={styles.label}>Hasta Adı (İsteğe bağlı)</Text>
+        <Text style={styles.label}>Patient name (optional)</Text>
         <TextInput
           style={styles.input}
-          placeholder="ör. Ahmet Yılmaz"
+          placeholder="eg. Ahmet Yılmaz"
           placeholderTextColor="rgba(255,255,255,0.3)"
           value={patientName}
           onChangeText={setPatientName}
@@ -99,7 +99,7 @@ export default function RegisterScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? "Hesap oluşturuluyor..." : "Kayıt Ol"}
+            {isLoading ? "Creating account..." : "Sign up"}
           </Text>
         </TouchableOpacity>
 
@@ -109,8 +109,8 @@ export default function RegisterScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.loginText}>
-            Zaten hesabınız var mı?{" "}
-            <Text style={styles.loginLink}>Giriş Yap</Text>
+            Do you already have an account?{" "}
+            <Text style={styles.loginLink}>Log in</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
