@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications";
 
 import * as TaskManager from "expo-task-manager";
+import { Platform } from "react-native";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
@@ -20,6 +21,7 @@ interface UserProfile {
   username: string;
   patient_name: string;
   voice_id: string | null;
+  assistant_id: string | null;
 }
 
 interface AuthContextType {
@@ -31,6 +33,7 @@ interface AuthContextType {
     username: string,
     password: string,
     patientName?: string,
+    menuPin?: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -81,7 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn("Push token registration failed", error);
     });
     startCommandSyncService()
-      .then(() => TaskManager.getRegisteredTasksAsync())
+      .then(() => {
+        if (Platform.OS !== "web") {
+          return TaskManager.getRegisteredTasksAsync();
+        }
+        return [];
+      })
       .then((tasks) => {
         console.log("Registered background tasks:", tasks);
       })
@@ -118,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     username: string,
     password: string,
     patientName = "",
+    menuPin = "",
   ) => {
     const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: "POST",
@@ -126,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         username,
         password,
         patient_name: patientName,
+        menu_pin: menuPin,
       }),
     });
 

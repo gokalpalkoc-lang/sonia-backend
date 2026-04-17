@@ -1,9 +1,7 @@
 export interface Command {
-  id?: string;
-  assistantName?: string;
+  id?: number | string;
   time: string;
   prompt: string;
   firstMessage?: string;
-  assistantId?: string;
   expanded: boolean;
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { API_BASE_URL, ASSISTANT_ID } from "./config";
 import { vapi, earlyStartAssistantId, earlyCallFired } from "./vapi-instance";
@@ -6,11 +6,19 @@ import { vapi, earlyStartAssistantId, earlyCallFired } from "./vapi-instance";
 function App() {
   const queryAssistantId =
     new URLSearchParams(window.location.search).get("start_assistant_id")?.trim() || "";
-  const fallbackAssistantId = ASSISTANT_ID?.trim() || "";
+  const voiceIdParam =
+    new URLSearchParams(window.location.search).get("voiceId")?.trim() || "";
+  // The user's single assistant ID (passed from the Expo app)
+  const userAssistantId =
+    new URLSearchParams(window.location.search).get("assistant_id")?.trim() || "";
+    
+  // Use user's assistant ID first, then query param, then early start, then fallback
+  const isDeadFallback = ASSISTANT_ID?.trim() === "2135f31f-5c85-4517-9574-571a1b1d0e38";
+  const defaultFallback = isDeadFallback ? "" : (ASSISTANT_ID?.trim() || "");
 
   const [isCallActive, setIsCallActive] = useState(false);
   const [currentAssistantId, setCurrentAssistantId] = useState<string>(
-    queryAssistantId || earlyStartAssistantId || fallbackAssistantId,
+    userAssistantId || queryAssistantId || earlyStartAssistantId || defaultFallback,
   );
   const isVapiInitialized = useRef(false);
 
@@ -73,6 +81,33 @@ function App() {
     }
   };
 
+  /**
+   * Revert the assistant's system prompt back to the base master prompt.
+   * Called when a conversation ends so the next call starts fresh.
+   */
+  const revertAssistantPrompt = async () => {
+    const assistantToRevert = userAssistantId || currentAssistantId;
+    if (!assistantToRevert) {
+      console.warn("No assistant ID available to revert prompt");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/commands/revert-prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assistant_id: assistantToRevert }),
+      });
+      if (response.ok) {
+        console.log("Assistant prompt reverted to base");
+      } else {
+        console.warn("Failed to revert prompt:", response.status);
+      }
+    } catch (error) {
+      console.warn("Error reverting prompt:", error);
+    }
+  };
+
   useEffect(() => {
     if (isVapiInitialized.current) {
       return;
@@ -88,6 +123,8 @@ function App() {
 
     vapi.on("call-end", () => {
       setIsCallActive(false);
+      // Revert the system prompt when the conversation ends
+      revertAssistantPrompt();
     });
 
     vapi.on("error", (error: any) => {
@@ -129,12 +166,29 @@ function App() {
   }, []);
 
   const startCall = async () => {
-    if (!currentAssistantId) {
+    if (!currentAssistantId && !voiceIdParam) {
       return;
     }
 
     try {
-      await vapi.start(currentAssistantId);
+      if (currentAssistantId) {
+        await vapi.start(currentAssistantId);
+      } else {
+        await vapi.start({
+          name: "Sonia AI",
+          model: {
+            provider: "openai",
+            model: "gpt-4o-mini",
+            systemPrompt: "Sen, Sonia adında nazik ve yardımsever bir Tıbbi asistansın. Türkçe konuşuyorsun. İhtiyaç duyan hastalara yol gösteriyorsun.",
+            maxTokens: 500,
+          },
+          voice: {
+            provider: "11labs",
+            voiceId: voiceIdParam,
+          },
+          firstMessage: "Merhaba, ben yapay zekâ asistanınızım. Size nasıl yardımcı olabilirim?"
+        });
+      }
     } catch (error) {
       console.error("Failed to start call:", error);
     }
@@ -170,10 +224,14 @@ function App() {
 
         <div className="assistant-info">
           {currentAssistantId ? (
-            <p className="status-text">Using assistant: {currentAssistantId}</p>
+            <p className="status-text">Kullanılan Asistan: {currentAssistantId}</p>
+          ) : voiceIdParam ? (
+            <p className="status-text">
+              Kullanılan Ses: {voiceIdParam} (Dinamik Asistan Oluşturuluyor)
+            </p>
           ) : (
             <p className="status-text">
-              Missing `start_assistant_id` and no fallback assistant configured.
+              Mevcut bir asistan bağlantısı veya ses kimliği bulunamadı.
             </p>
           )}
         </div>
@@ -183,7 +241,7 @@ function App() {
             <button
               onClick={startCall}
               className="call-button"
-              disabled={!currentAssistantId}
+              disabled={!currentAssistantId && !voiceIdParam}
             >
               Ara
             </button>

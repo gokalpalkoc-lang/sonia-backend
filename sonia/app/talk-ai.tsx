@@ -13,11 +13,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
+import { useAuth } from "@/context/auth-context";
 import { useCommands } from "@/context/commands-context";
+import { useTheme } from "@/context/theme-context";
 import { scheduleCommandReminder } from "@/lib/notifications";
 import { getVoiceId } from "@/lib/storage";
 
-const MESSSIII_URL = process.env.EXPO_PUBLIC_WEBSITE_URL!;
+const VOICE_WEBVIEW_URL = process.env.EXPO_PUBLIC_WEBSITE_URL!;
 
 // JavaScript to inject into the WebView to capture console logs
 const CONSOLE_INJECT_SCRIPT = `
@@ -70,24 +72,6 @@ const CONSOLE_INJECT_SCRIPT = `
       sendMessage('info', args);
     };
 
-    const originalFetch = window.fetch;
-    window.fetch = async function(input, init) {
-      const response = await originalFetch(input, init);
-      try {
-        const url = typeof input === 'string' ? input : input?.url;
-        const method = (init?.method || 'GET').toUpperCase();
-        if (url && method === 'POST' && url.includes('/api/commands') && init?.body) {
-          const payload = typeof init.body === 'string' ? JSON.parse(init.body) : null;
-          if (payload && payload.time && payload.prompt) {
-            sendRaw({ type: 'command-created', command: payload });
-          }
-        }
-      } catch (error) {
-        sendMessage('warn', ['Failed to inspect fetch payload', error]);
-      }
-      return response;
-    };
-
     window.onerror = function(message, source, lineno, colno, error) {
       sendMessage('error', [message + ' (line ' + lineno + ':' + colno + ')']);
     };
@@ -99,7 +83,9 @@ export default function TalkAIScreen() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
   const { addCommand } = useCommands();
-  const [webUri, setWebUri] = React.useState(MESSSIII_URL);
+  const { profile } = useAuth();
+  const { colors } = useTheme();
+  const [webUri, setWebUri] = React.useState(VOICE_WEBVIEW_URL);
   const [hasMicPermission, setHasMicPermission] = React.useState<boolean | null>(null);
 
   const requestMicPermission = React.useCallback(async () => {
@@ -118,6 +104,7 @@ export default function TalkAIScreen() {
       setHasMicPermission(false);
     }
   }, []);
+
   const { assistantId, autoStart } = useLocalSearchParams<{
     assistantId?: string;
     autoStart?: string;
@@ -135,13 +122,23 @@ export default function TalkAIScreen() {
         const voiceId = await getVoiceId();
         if (!isMounted) return;
 
-        const url = new URL(MESSSIII_URL);
+        const url = new URL(VOICE_WEBVIEW_URL);
+
+        // Use the user's single assistant ID from profile
+        const userAssistantId = profile?.assistant_id;
+        if (userAssistantId?.trim()) {
+          url.searchParams.set("assistant_id", userAssistantId);
+        }
+
         if (voiceId?.trim()) {
           url.searchParams.set("voiceId", voiceId);
         }
+
+        // Allow override via params (e.g. from notification deep link)
         if (autoStart === "1" && assistantId?.trim()) {
           url.searchParams.set("start_assistant_id", assistantId.trim());
         }
+
         setWebUri(url.toString());
       } catch (error) {
         console.warn("Failed to build webview URL", error);
@@ -153,7 +150,7 @@ export default function TalkAIScreen() {
     return () => {
       isMounted = false;
     };
-  }, [autoStart, assistantId]);
+  }, [autoStart, assistantId, profile]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -163,7 +160,6 @@ export default function TalkAIScreen() {
       if (type === "command-created" && command?.time && command?.prompt) {
         const incomingCommand = {
           id: `${Date.now()}-${Math.random()}`,
-          assistantName: command.assistantName,
           time: String(command.time),
           prompt: String(command.prompt),
           firstMessage: command.firstMessage
@@ -198,49 +194,63 @@ export default function TalkAIScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/carousel");
+            }
+          }}
           activeOpacity={0.7}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.text }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>✦ Talk with Artificial Intelligence</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>✦ Talk with Artificial Intelligence</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {hasMicPermission ? (
-        <WebView
-          ref={webViewRef}
-          source={{ uri: webUri }}
-          style={styles.webview}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          mediaPlaybackRequiresUserAction={false}
-          allowsInlineMediaPlayback={true}
-          startInLoadingState={true}
-          injectedJavaScript={CONSOLE_INJECT_SCRIPT}
-          mediaCapturePermissionGrantType={
-            Platform.OS === "android" ? "grantIfSameHostElsePrompt" : undefined
-          }
-          onMessage={handleMessage}
-          renderLoading={() => (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4F46E5" />
-              <Text style={styles.loadingText}>Artifical Intelligence screen loading...</Text>
-            </View>
-          )}
-        />
+        Platform.OS === "web" ? (
+          <iframe
+            src={webUri}
+            allow="microphone"
+            style={{ flex: 1, width: "100%", height: "100%", border: "none" }}
+          />
+        ) : (
+          <WebView
+            ref={webViewRef}
+            source={{ uri: webUri }}
+            style={styles.webview}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            mediaPlaybackRequiresUserAction={false}
+            allowsInlineMediaPlayback={true}
+            startInLoadingState={true}
+            injectedJavaScript={CONSOLE_INJECT_SCRIPT}
+            mediaCapturePermissionGrantType={
+              Platform.OS === "android" ? "grantIfSameHostElsePrompt" : undefined
+            }
+            onMessage={handleMessage}
+            renderLoading={() => (
+              <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.accent} />
+                <Text style={[styles.loadingText, { color: colors.text }]}>Artifical Intelligence screen loading...</Text>
+              </View>
+            )}
+          />
+        )
       ) : (
         <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Waiting for microphone access</Text>
-          <Text style={styles.permissionText}>
+          <Text style={[styles.permissionTitle, { color: colors.text }]}>Waiting for microphone access</Text>
+          <Text style={[styles.permissionText, { color: colors.textSecondary }]}>
             Microphone Access is required in order to talk with Artificial Intelligence.
           </Text>
           <TouchableOpacity
-            style={styles.permissionButton}
+            style={[styles.permissionButton, { backgroundColor: colors.accent }]}
             onPress={requestMicPermission}
             activeOpacity={0.8}
           >

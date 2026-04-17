@@ -40,6 +40,26 @@ export async function login(username: string, password: string) {
   return data;
 }
 
+/** Register a new account and auto-login */
+export async function register(username: string, password: string, patientName: string) {
+  const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password, patient_name: patientName }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg =
+      data.errors?.username?.[0] ||
+      data.errors?.password?.[0] ||
+      data.error ||
+      "Kayıt başarısız.";
+    throw new Error(msg);
+  }
+  // Auto-login after registration
+  return login(username, password);
+}
+
 /** Get the current user's profile */
 export async function fetchProfile() {
   const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {

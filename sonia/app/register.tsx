@@ -13,15 +13,18 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/auth-context";
+import { useTheme } from "@/context/theme-context";
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
+  const { colors } = useTheme();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [patientName, setPatientName] = useState("");
+  const [menuPin, setMenuPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -33,10 +36,14 @@ export default function RegisterScreen() {
       Alert.alert("Weak password", "The password must be at least 8 characters long.");
       return;
     }
+    if (menuPin && (menuPin.length !== 4 || !/^\d{4}$/.test(menuPin))) {
+      Alert.alert("Invalid PIN", "Menu PIN must be exactly 4 digits.");
+      return;
+    }
 
     setIsLoading(true);
     try {
-      await register(username.trim(), password, patientName.trim());
+      await register(username.trim(), password, patientName.trim(), menuPin.trim());
       router.replace("/");
     } catch (error: any) {
       Alert.alert("Sign up failed", error.message || "Please try again.");
@@ -47,23 +54,23 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={[styles.inner, { paddingTop: insets.top + 40 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Create account</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Create a new account.
         </Text>
 
-        <Text style={styles.label}>Username</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Username</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="eg. bakici_ali"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={colors.textMuted}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -71,29 +78,46 @@ export default function RegisterScreen() {
           autoFocus
         />
 
-        <Text style={styles.label}>Password</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="At least 8 characters"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
 
-        <Text style={styles.label}>Patient name (optional)</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Patient name (optional)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="eg. Ahmet Yılmaz"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={colors.textMuted}
           value={patientName}
           onChangeText={setPatientName}
+        />
+
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Menu PIN (4 digits)</Text>
+        <Text style={[styles.pinHint, { color: colors.textMuted }]}>
+          This PIN protects access to the commands menu.
+        </Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+          placeholder="eg. 1234"
+          placeholderTextColor={colors.textMuted}
+          value={menuPin}
+          onChangeText={(text) => {
+            const digits = text.replace(/\D/g, "").slice(0, 4);
+            setMenuPin(digits);
+          }}
+          keyboardType="number-pad"
+          maxLength={4}
           onSubmitEditing={handleRegister}
           returnKeyType="go"
         />
 
         <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+          style={[styles.submitButton, { backgroundColor: colors.accent }, isLoading && styles.submitButtonDisabled]}
           onPress={handleRegister}
           activeOpacity={0.8}
           disabled={isLoading}
@@ -105,10 +129,16 @@ export default function RegisterScreen() {
 
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/");
+            }
+          }}
           activeOpacity={0.7}
         >
-          <Text style={styles.loginText}>
+          <Text style={[styles.loginText, { color: colors.textSecondary }]}>
             Do you already have an account?{" "}
             <Text style={styles.loginLink}>Log in</Text>
           </Text>
@@ -145,6 +175,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  pinHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 12,
+    marginBottom: 8,
   },
   input: {
     width: "100%",

@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/auth-context";
+import { useTheme } from "@/context/theme-context";
 import { apiFetchForm } from "@/lib/api";
 import { setVoiceId } from "@/lib/storage";
 
@@ -26,6 +28,7 @@ export default function VoiceSetupScreen() {
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const { refreshProfile } = useAuth();
+  const { colors } = useTheme();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [countdown, setCountdown] = useState(RECORD_DURATION);
@@ -115,11 +118,17 @@ export default function VoiceSetupScreen() {
     try {
       // Build multipart form data
       const formData = new FormData();
-      formData.append("audio", {
-        uri,
-        type: "audio/m4a",
-        name: "voice-sample.m4a",
-      } as any);
+      if (Platform.OS === "web") {
+        const blobRes = await fetch(uri);
+        const blob = await blobRes.blob();
+        formData.append("audio", blob, "voice-sample.m4a");
+      } else {
+        formData.append("audio", {
+          uri,
+          type: "audio/m4a",
+          name: "voice-sample.m4a",
+        } as any);
+      }
       formData.append("name", "Sonia User Voice");
 
       const response = await apiFetchForm('/api/voice-clone', {
@@ -137,7 +146,7 @@ export default function VoiceSetupScreen() {
 
         // Small delay so user sees the success state, then navigate
         setTimeout(() => {
-          router.replace("/");
+          router.replace("/carousel");
         }, 1200);
       } else {
         Alert.alert(
@@ -163,10 +172,10 @@ export default function VoiceSetupScreen() {
   const progress = 1 - countdown / RECORD_DURATION;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 40, backgroundColor: colors.background }]}>
       {/* Title */}
-      <Text style={styles.title}>Voice Setup</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, { color: colors.text }]}>Voice Setup</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Record your voice for 30 seconds in order for us to create you an artifical intelligence voice clone.
       </Text>
 
@@ -181,7 +190,7 @@ export default function VoiceSetupScreen() {
             >
               <Text style={styles.micIcon}>🎙️</Text>
             </TouchableOpacity>
-            <Text style={styles.hint}>Click to start recording</Text>
+            <Text style={[styles.hint, { color: colors.textMuted }]}>Click to start recording</Text>
           </>
         )}
 
@@ -209,11 +218,11 @@ export default function VoiceSetupScreen() {
 
         {phase === "uploading" && (
           <>
-            <ActivityIndicator size="large" color="#4F46E5" />
-            <Text style={styles.uploadingLabel}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text style={[styles.uploadingLabel, { color: colors.text }]}>
               Your voice is being uploaded and cloned…
             </Text>
-            <Text style={styles.hint}>This might take a while.</Text>
+            <Text style={[styles.hint, { color: colors.textMuted }]}>This might take a while.</Text>
           </>
         )}
 
@@ -263,10 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#4F46E5",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
+    boxShadow: "0px 6px 18px rgba(79, 70, 229, 0.45)",
     elevation: 10,
     marginBottom: 20,
   },

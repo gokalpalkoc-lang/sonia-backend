@@ -3,10 +3,12 @@ import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/context/auth-context";
 import { CommandsProvider } from "@/context/commands-context";
+import { ThemeProvider, useTheme } from "@/context/theme-context";
 import {
   addNotificationReceivedListener,
   addNotificationTapListener,
@@ -39,14 +41,16 @@ function NavigationEffects() {
 
     // Handle cold-start: if the app was killed and user tapped a notification,
     // the tap listener won't fire. Check for the last notification response.
-    const response = Notifications.getLastNotificationResponse();
-    if (response) {
-      const data = response.notification.request.content.data ?? {};
-      openTalkAi({
-        screen: typeof data.screen === "string" ? data.screen : undefined,
-        assistantId:
-          typeof data.assistantId === "string" ? data.assistantId : undefined,
-      });
+    if (Platform.OS !== "web") {
+      const response = Notifications.getLastNotificationResponse();
+      if (response) {
+        const data = response.notification.request.content.data ?? {};
+        openTalkAi({
+          screen: typeof data.screen === "string" ? data.screen : undefined,
+          assistantId:
+            typeof data.assistantId === "string" ? data.assistantId : undefined,
+        });
+      }
     }
 
     const notificationTapSubscription = addNotificationTapListener(openTalkAi);
@@ -81,32 +85,44 @@ function NavigationEffects() {
   return null;
 }
 
+function ThemedApp() {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <>
+      <NavigationEffects />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: "slide_from_right",
+        }}
+      >
+        <Stack.Screen name="index" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="register" />
+        <Stack.Screen name="voice-setup" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="carousel" />
+        <Stack.Screen name="password" />
+        <Stack.Screen name="protected" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="talk-ai" />
+        <Stack.Screen
+          name="add-command"
+          options={{ presentation: "modal", animation: "slide_from_bottom" }}
+        />
+      </Stack>
+      <StatusBar style={isDark ? "light" : "dark"} />
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <CommandsProvider>
-        <NavigationEffects />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: "#0D0D1A" },
-            animation: "slide_from_right",
-          }}
-        >
-          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="register" />
-          <Stack.Screen name="voice-setup" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="password" />
-          <Stack.Screen name="protected" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="talk-ai" />
-          <Stack.Screen
-            name="add-command"
-            options={{ presentation: "modal", animation: "slide_from_bottom" }}
-          />
-        </Stack>
-        <StatusBar style="light" />
-      </CommandsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CommandsProvider>
+          <ThemedApp />
+        </CommandsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

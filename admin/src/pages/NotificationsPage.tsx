@@ -87,7 +87,7 @@ const s: Record<string, React.CSSProperties> = {
   header: { marginBottom: 24 },
   pageTitle: { fontSize: 26, fontWeight: 700, color: "#fff", margin: "0 0 4px" },
   pageSub: { fontSize: 14, color: "rgba(255,255,255,0.4)", margin: 0 },
-  card: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20, maxWidth: 500, marginBottom: 20 },
+  card: { backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20, marginBottom: 20 },
   cardTitle: { fontSize: 17, fontWeight: 700, color: "#fff", margin: "0 0 18px" },
   form: { display: "flex", flexDirection: "column", gap: 14 },
   fieldGroup: { display: "flex", flexDirection: "column", gap: 6 },
@@ -98,6 +98,6 @@ const s: Record<string, React.CSSProperties> = {
   resultErr: { backgroundColor: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" },
   sendBtn: { backgroundColor: "#4F46E5", border: "none", borderRadius: 10, padding: "13px 0", fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", width: "100%" },
   disabled: { opacity: 0.5, cursor: "not-allowed" },
-  infoBox: { display: "flex", gap: 12, alignItems: "flex-start", backgroundColor: "rgba(79,70,229,0.08)", border: "1px solid rgba(79,70,229,0.2)", borderRadius: 12, padding: "14px 16px", maxWidth: 500 },
+  infoBox: { display: "flex", gap: 12, alignItems: "flex-start", backgroundColor: "rgba(79,70,229,0.08)", border: "1px solid rgba(79,70,229,0.2)", borderRadius: 12, padding: "14px 16px" },
   infoText: { fontSize: 13, color: "rgba(255,255,255,0.45)", margin: 0, lineHeight: 1.6 },
 };

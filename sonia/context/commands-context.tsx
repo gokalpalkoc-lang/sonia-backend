@@ -23,10 +23,16 @@ export function CommandsProvider({ children }: { children: React.ReactNode }) {
     });
 
   const deleteCommand = (index: number) => {
+    const commandId = commands[index]?.id;
     setCommands((prev) => prev.filter((_, i) => i !== index));
-    apiFetch(`/api/commands`, { method: "DELETE", body: JSON.stringify({ assistantId: commands[index]?.assistantId }) }).catch((error) => {
-      console.error(`Failed to delete command at index ${index}:`, error);
-    });
+    if (commandId) {
+      apiFetch(`/api/commands`, {
+        method: "DELETE",
+        body: JSON.stringify({ commandId }),
+      }).catch((error) => {
+        console.error(`Failed to delete command ${commandId}:`, error);
+      });
+    }
   };
 
   const toggleExpand = (index: number) =>

@@ -4,14 +4,14 @@ from .models import Command, AssistantCall, UserProfile, PushToken
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'patient_name', 'voice_id', 'created_at')
+    list_display = ('user', 'patient_name', 'voice_id', 'menu_pin', 'assistant_id', 'created_at')
     search_fields = ('user__username', 'patient_name')
 
 
 @admin.register(Command)
 class CommandAdmin(admin.ModelAdmin):
-    list_display = ('assistant_name', 'time', 'assistant_id', 'user', 'created_at')
-    search_fields = ('assistant_name', 'assistant_id', 'user__username')
+    list_display = ('pk', 'time', 'prompt', 'user', 'created_at')
+    search_fields = ('prompt', 'user__username')
 
 
 @admin.register(AssistantCall)

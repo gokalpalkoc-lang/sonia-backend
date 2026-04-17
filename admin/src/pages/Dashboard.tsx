@@ -307,6 +307,7 @@ const inlineS: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,0.4)",
     cursor: "pointer",
     gap: 2,
+    transition: "color 0.15s ease",
   } as React.CSSProperties,
   mobileTabActive: {
     color: "#A5B4FC",

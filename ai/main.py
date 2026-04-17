@@ -26,6 +26,7 @@ from typing import Dict, List, Optional, Tuple
 import requests
 from dotenv import load_dotenv
 import os
+import threading
 
 import numpy as np
 
@@ -142,6 +143,11 @@ class FaceEmotionModule:
         b = min(h, bottom + pad_y)
         l = max(0, left - pad_x)
         r = min(w, right + pad_x)
+        
+        # Ensure proper bounds and non-zero slice
+        if t >= b or l >= r:
+            return np.array([])
+            
         return frame[t:b, l:r]
 
     # ------------------------------------------------------------------
@@ -266,37 +272,44 @@ class FaceEmotionModule:
 _last_notification_time = time.time() - NOTIFICATION_COOLDOWN_SECS
 
 
-def send_notification(name: str, notification_uuid: str, emotion: str, backend_url: str = "http://localhost:8000") -> None:
-    """Send a push notification only if the cooldown has elapsed."""
+def send_notification(name: str, notification_uuid: str, emotion: str, backend_url: str) -> None:
+    """Send a push notification asynchronously only if the cooldown has elapsed."""
     global _last_notification_time
     if time.time() - _last_notification_time < NOTIFICATION_COOLDOWN_SECS:
         return
-    try:
-        resp = requests.post(
-            f"{backend_url}/api/notify",
-            json={
-                "notification_uuid": notification_uuid,
-                "title": "Sonia",
-                "body": f"{emotion} algılandı",
-                "data": {"screen": "talk-ai"},
-            },
-            timeout=10,
-        )
-        if resp.ok:
-            print(f"[NOTIFY] Sent notification for '{name}' — {emotion}")
-        else:
-            print(f"[NOTIFY] Failed ({resp.status_code}): {resp.text}")
-    except Exception as e:
-        print(f"[NOTIFY] Error: {e}")
-    finally:
-        _last_notification_time = time.time()
+        
+    _last_notification_time = time.time()
+
+    def _post():
+        try:
+            resp = requests.post(
+                f"{backend_url}/api/notify",
+                json={
+                    "notification_uuid": notification_uuid,
+                    "title": "Sonia",
+                    "body": f"{emotion} algılandı",
+                    "data": {"screen": "talk-ai"},
+                },
+                timeout=10,
+            )
+            if resp.ok:
+                print(f"[NOTIFY] Sent notification for '{name}' — {emotion}")
+            else:
+                print(f"[NOTIFY] Failed ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            print(f"[NOTIFY] Error: {e}")
+
+    threading.Thread(target=_post, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
 # Main loop
 # ---------------------------------------------------------------------------
 def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Optional[str] = None) -> int:
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL")
+    if not backend_url:
+        raise ValueError("BACKEND_URL is not defined in environment variables")
+        
     module = FaceEmotionModule(known_faces_dir=known_faces_dir)
 
     cap = cv2.VideoCapture(camera)

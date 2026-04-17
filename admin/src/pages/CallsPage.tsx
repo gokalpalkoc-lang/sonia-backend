@@ -184,7 +184,7 @@ export default function CallsPage() {
 
       {/* Summary */}
       {!loading && !error && rows.length > 0 && (
-        <div style={s.statsRow}>
+        <div className="stats-row">
           <div style={s.statCard}>
             <span style={s.statNum}>{rows.length}</span>
             <span style={s.statLbl}>Asistan</span>
@@ -282,8 +282,8 @@ export default function CallsPage() {
                           <p style={s.summary}><strong>Özet:</strong> {call.summary}</p>
                         )}
                         {row.expandedCallId === call.id && call.transcript && (
-                          <div style={s.transcriptBox}>
-                            <pre style={s.transcriptText}>{call.transcript}</pre>
+                          <div className="transcript-box">
+                            <pre className="transcript-text">{call.transcript}</pre>
                           </div>
                         )}
                       </div>

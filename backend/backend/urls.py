@@ -26,8 +26,11 @@ urlpatterns = [
     path('api/auth/token', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/profile', views.profile, name='profile'),
+    path('api/auth/verify-pin', views.verify_pin, name='verify_pin'),
     # Protected API endpoints (require JWT)
     path('api/commands', views.commands, name='commands'),
+    path('api/commands/activate', views.activate_command, name='activate_command'),
+    path('api/commands/revert-prompt', views.revert_prompt, name='revert_prompt'),
     path('api/voice-clone', views.voice_clone, name='voice_clone'),
     path('api/register-push-token', views.register_push_token, name='register_push_token'),
     path('api/send-push', views.send_push_notification, name='send_push_notification'),

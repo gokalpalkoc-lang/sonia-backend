@@ -13,75 +13,60 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCommands } from "@/context/commands-context";
+import { useTheme } from "@/context/theme-context";
 import { apiFetch } from "@/lib/api";
 import { scheduleCommandReminder } from "@/lib/notifications";
-import { getVoiceId } from "@/lib/storage";
 import type { Command } from "@/types/command";
 
 export default function AddCommandScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addCommand } = useCommands();
+  const { colors } = useTheme();
 
-  const [assistantName, setAssistantName] = useState("");
   const [timeInput, setSaatInput] = useState("");
   const [promptInput, setPromptInput] = useState("");
   const [firstMessageInput, setFirstMessageInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAppend = async () => {
-    if (!assistantName.trim()) {
-      Alert.alert("Eksik Alanlar", "Lütfen bir asistan adı girin.");
-      return;
-    }
     if (!timeInput.trim() || !promptInput.trim() || !firstMessageInput.trim()) {
       Alert.alert(
-        "Eksik Alanlar",
-        "Lütfen saat, istem ve ilk mesajı girin.",
+        "Missing Fields",
+        "Please enter time, prompt, and first message.",
       );
       return;
     }
 
     const newCommand = {
-      assistantName: assistantName.trim(),
       time: timeInput.trim(),
       prompt: promptInput.trim(),
       firstMessage: firstMessageInput.trim(),
       expanded: false,
     };
 
-    // Send command to backend server first to get the assistantId
     setIsLoading(true);
     try {
-      // Include cloned voice ID if available
-      const voiceId = await getVoiceId();
-      const payload = voiceId ? { ...newCommand, voiceId } : newCommand;
-
       const response = await apiFetch('/api/commands', {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(newCommand),
       });
 
-      let assistantId: string | undefined;
+      let commandId: number | string | undefined;
       if (response.ok) {
         const data = await response.json();
-        assistantId = data.assistantId ?? undefined;
+        commandId = data.commandId ?? undefined;
         console.log("Command sent to backend successfully");
-        if (assistantId) {
-          console.log("Created assistant ID:", assistantId);
-        }
       } else {
         console.error("Failed to send command to backend:", response.status);
       }
 
-      // Add command locally with the assistantId and schedule reminder
+      // Add command locally and schedule reminder
       const localCommand: Command = {
-        id: `${Date.now()}`,
-        assistantName: assistantName.trim(),
+        id: commandId ?? `${Date.now()}`,
         time: timeInput.trim(),
         prompt: promptInput.trim(),
         firstMessage: firstMessageInput.trim(),
-        assistantId,
         expanded: false,
       };
       addCommand(localCommand);
@@ -92,10 +77,9 @@ export default function AddCommandScreen() {
       }
     } catch (error) {
       console.error("Error sending command to backend:", error);
-      // Still add command locally without assistantId
+      // Still add command locally
       const localCommand: Command = {
         id: `${Date.now()}`,
-        assistantName: assistantName.trim(),
         time: timeInput.trim(),
         prompt: promptInput.trim(),
         firstMessage: firstMessageInput.trim(),
@@ -104,64 +88,61 @@ export default function AddCommandScreen() {
       addCommand(localCommand);
     } finally {
       setIsLoading(false);
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/carousel");
+      }
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         contentContainerStyle={[styles.inner, { paddingTop: insets.top + 24 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>New Command</Text>
-        <Text style={styles.subtitle}>
-          Determine assistant name, time, system prompt and a first message for the command.
+        <Text style={[styles.title, { color: colors.text }]}>New Command</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+          Set a time, system prompt addition, and a first message for the command.
         </Text>
 
-        {/* Asistan Adı */}
-        <Text style={styles.label}>Assistant Name</Text>
+        {/* Time */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Time</Text>
         <TextInput
-          style={styles.input}
-          placeholder="eg. My Assistant..."
-          placeholderTextColor="rgba(255,255,255,0.3)"
-          value={assistantName}
-          onChangeText={setAssistantName}
-          autoFocus
-        />
-
-        {/* Saat */}
-        <Text style={styles.label}>Time</Text>
-        <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="HH:MM"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={colors.textMuted}
           value={timeInput}
           onChangeText={setSaatInput}
           keyboardType="numbers-and-punctuation"
+          autoFocus
         />
 
-        {/* Prompt (Sistem İstemi) */}
-        <Text style={styles.label}>System Prompt</Text>
+        {/* Prompt (System Prompt Addition) */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>System Prompt Addition</Text>
+        <Text style={[styles.fieldHint, { color: colors.textMuted }]}>
+          This will be appended to the assistant's base prompt during the conversation.
+        </Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Explain the command..."
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+          placeholder="Extra instructions for the assistant..."
+          placeholderTextColor={colors.textMuted}
           value={promptInput}
           onChangeText={setPromptInput}
           multiline
           textAlignVertical="top"
         />
 
-        {/* İlk Mesaj */}
-        <Text style={styles.label}>First Message</Text>
+        {/* First Message */}
+        <Text style={[styles.label, { color: colors.textSecondary }]}>First Message</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="What should assistant say first?"
-          placeholderTextColor="rgba(255,255,255,0.3)"
+          placeholderTextColor={colors.textMuted}
           value={firstMessageInput}
           onChangeText={setFirstMessageInput}
           multiline
@@ -171,6 +152,7 @@ export default function AddCommandScreen() {
         <TouchableOpacity
           style={[
             styles.submitButton,
+            { backgroundColor: colors.accent },
             isLoading && styles.submitButtonDisabled,
           ]}
           onPress={handleAppend}
@@ -178,16 +160,22 @@ export default function AddCommandScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitText}>
-            {isLoading ? "Creating..." : "Create Assistant"}
+            {isLoading ? "Creating..." : "Add Command"}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.cancelButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/carousel");
+            }
+          }}
           activeOpacity={0.7}
         >
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, { color: colors.textMuted }]}>Cancel</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -221,6 +209,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.8,
+  },
+  fieldHint: {
+    color: "rgba(255,255,255,0.3)",
+    fontSize: 12,
+    marginBottom: 8,
   },
   input: {
     width: "100%",

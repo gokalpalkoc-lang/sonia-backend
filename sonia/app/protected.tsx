@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,13 +12,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/auth-context";
 import { useCommands } from "@/context/commands-context";
+import { useTheme } from "@/context/theme-context";
 import { apiFetch } from "@/lib/api";
 
 export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
+  const { colors } = useTheme();
 
   // Fetch commands from backend on mount (authenticated)
   React.useEffect(() => {
@@ -34,15 +37,35 @@ export default function ProtectedScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.dismissAll();
+    router.replace("/");
+  };
+
+  const handleActivateCommand = async (commandId: number | string) => {
+    try {
+      const response = await apiFetch('/api/commands/activate', {
+        method: 'POST',
+        body: JSON.stringify({ commandId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Navigate to talk-ai — the assistant prompt has been patched
+        router.push("/talk-ai");
+      } else {
+        Alert.alert("Error", data.error || "Could not activate command.");
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to activate command.");
+    }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Commands
-        <Text style={styles.badge}>{commands.length}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Commands</Text>
+        <Text style={[styles.badge, { backgroundColor: colors.accent }]}>{commands.length}</Text>
       </View>
 
       {/* Command list */}
@@ -54,30 +77,39 @@ export default function ProtectedScreen() {
         {commands.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No command yet
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No command yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
               Click "Add Command" to create your first command.
             </Text>
           </View>
         )}
 
         {commands.map((cmd, index) => (
-          <View key={index} style={styles.commandCard}>
+          <View key={cmd.id ?? index} style={[styles.commandCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.commandHeader}>
               <View style={styles.timeBadge}>
                 <Text style={styles.timeBadgeText}>{cmd.time}</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => deleteCommand(index)}
-                style={styles.deleteButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.deleteText}>✕</Text>
-              </TouchableOpacity>
+              <View style={styles.commandActions}>
+                <TouchableOpacity
+                  onPress={() => handleActivateCommand(cmd.id!)}
+                  style={styles.activateButton}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.activateText}>▶ Start</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => deleteCommand(index)}
+                  style={styles.deleteButton}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.deleteText}>✕</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Text
-              style={styles.promptText}
+              style={[styles.promptText, { color: colors.textSecondary }]}
               numberOfLines={cmd.expanded ? undefined : 2}
             >
               {cmd.prompt}
@@ -98,9 +130,9 @@ export default function ProtectedScreen() {
       </ScrollView>
 
       {/* Bottom actions */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12, borderTopColor: colors.border }]}>
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: colors.accent }]}
           onPress={() => router.push("/add-command")}
           activeOpacity={0.8}
         >
@@ -108,11 +140,19 @@ export default function ProtectedScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={() => router.push("/")}
+          style={styles.backButton}
+          onPress={() => router.push("/carousel")}
           activeOpacity={0.7}
         >
-          <Text style={styles.logoutText}>Log out</Text>
+          <Text style={[styles.backText, { color: colors.textSecondary }]}>← Back to Carousel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.logoutText, { color: colors.textMuted }]}>Log out</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -190,6 +230,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+  commandActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   timeBadge: {
     backgroundColor: "rgba(79,70,229,0.2)",
     paddingHorizontal: 12,
@@ -198,6 +243,17 @@ const styles = StyleSheet.create({
   },
   timeBadgeText: {
     color: "#A5B4FC",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  activateButton: {
+    backgroundColor: "rgba(34,197,94,0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  activateText: {
+    color: "#22C55E",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -243,6 +299,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  backButton: {
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  backText: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 14,
   },
   logoutButton: {
     paddingVertical: 12,

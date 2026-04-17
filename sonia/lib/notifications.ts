@@ -2,6 +2,7 @@ import * as BackgroundTask from "expo-background-task";
 import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 import { apiFetch } from "@/lib/api";
 import {
@@ -54,6 +55,8 @@ Notifications.setNotificationHandler({
  * receive server-initiated push notifications.
  */
 export async function registerForPushNotifications(dedupeKey = "default") {
+  if (Platform.OS === "web") return null;
+
   const { granted } = await Notifications.requestPermissionsAsync();
   if (!granted) return null;
 
@@ -89,6 +92,8 @@ export async function registerForPushNotifications(dedupeKey = "default") {
 
 
 export async function initializeNotifications() {
+  if (Platform.OS === "web") return;
+
   const { granted } = await Notifications.requestPermissionsAsync();
   if (!granted) return;
 
@@ -120,6 +125,8 @@ function getNextTriggerDate(time: string) {
 }
 
 export async function scheduleCommandReminder(command: Command) {
+  if (Platform.OS === "web") return;
+
   const trigger = getNextTriggerDate(command.time);
   const commandText = command.prompt;
 
@@ -188,17 +195,21 @@ async function syncCommandNotifications(): Promise<void> {
 
 // Must be defined at module (global) scope so the native task runner
 // can find it even when the app is launched headlessly in the background.
-TaskManager.defineTask(COMMAND_SYNC_TASK, async () => {
-  try {
-    await syncCommandNotifications();
-    return BackgroundTask.BackgroundTaskResult.Success;
-  } catch (error) {
-    console.warn("Background command sync failed:", error);
-    return BackgroundTask.BackgroundTaskResult.Failed;
-  }
-});
+if (Platform.OS !== "web") {
+  TaskManager.defineTask(COMMAND_SYNC_TASK, async () => {
+    try {
+      await syncCommandNotifications();
+      return BackgroundTask.BackgroundTaskResult.Success;
+    } catch (error) {
+      console.warn("Background command sync failed:", error);
+      return BackgroundTask.BackgroundTaskResult.Failed;
+    }
+  });
+}
 
 export async function startCommandSyncService() {
+  if (Platform.OS === "web") return;
+
   // Run once immediately so the user doesn't wait for the first background cycle
   syncCommandNotifications().catch((err) =>
     console.warn("Initial command sync failed:", err),
@@ -214,6 +225,8 @@ export async function startCommandSyncService() {
 }
 
 export async function stopCommandSyncService() {
+  if (Platform.OS === "web") return;
+
   const isRegistered =
     await TaskManager.isTaskRegisteredAsync(COMMAND_SYNC_TASK);
   if (!isRegistered) return;
