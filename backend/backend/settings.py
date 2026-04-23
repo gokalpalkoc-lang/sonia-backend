@@ -96,6 +96,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+AUTHENTICATION_BACKENDS = [
+    'api.auth_backends.CaseInsensitiveModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

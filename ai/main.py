@@ -3,12 +3,17 @@
 Uses temporal smoothing (majority vote over a sliding window) and
 confidence thresholding to produce stable, reliable emotion labels.
 
+When sustained distress is detected (3 consecutive negative smoothed
+readings), an emergency call is triggered via the backend, which
+patches the AI assistant with a calming prompt and sends a push
+notification that auto-starts the voice call on the patient's device.
+
 Usage:
     python ai/main.py --known-faces-dir ai/known_faces --camera 0
 
 Setup (recommended):
     pip install opencv-python face-recognition deepface numpy
-
+    
 Create known faces folder with images named like:
     alice.jpg
     bob.png
@@ -56,8 +61,25 @@ EMOTION_WINDOW_SIZE = 10        # sliding window length for majority voting
 EMOTION_MIN_CONFIDENCE = 45.0   # minimum DeepFace score (0-100) to accept
 EMOTION_SAMPLE_INTERVAL = 3     # run DeepFace every N frames (skip in between)
 FACE_CROP_PADDING = 0.25        # expand face crop by 25 % on each side
-NOTIFICATION_EMOTIONS = {"sad", "fear", "angry", "surprised", "disgusted"}
-NOTIFICATION_COOLDOWN_SECS = 30
+FACE_NUM_JITTERS = 3            # Bug A fix: consistent with face_utils.py
+FACE_MIN_SIZE = 32              # Bug F fix: minimum face crop size for DeepFace
+DEEPFACE_INPUT_SIZE = (224, 224)  # Consistent preprocessing target size
+NOTIFICATION_EMOTIONS = {"sad", "fear"} # Sadece korkma ve üzülme için bildirim
+EMERGENCY_COOLDOWN_SECS = 300   # 5 minutes cooldown between emergency calls
+SUSTAINED_DISTRESS_SECONDS = 3.0  # seconds of continuous negative smoothed emotion before triggering
+EMERGENCY_API_KEY = os.getenv("EMERGENCY_API_KEY", "")  # Bug E fix: shared secret for emergency endpoint
+
+# İngilizce duygu çıktılarını Türkçe'ye çevirmek için sözlük
+EMOTION_TR = {
+    "sad": "Üzülme",
+    "fear": "Korkma",
+    "angry": "Kızgın",
+    "disgust": "İğrenme",
+    "surprise": "Şaşırma",
+    "happy": "Mutlu",
+    "neutral": "Nötr",
+    "unknown": "Bilinmiyor"
+}
 
 
 @dataclass
@@ -122,7 +144,7 @@ class FaceEmotionModule:
 
         for image_path in image_paths:
             image = face_recognition.load_image_file(str(image_path))
-            encodings = face_recognition.face_encodings(image, num_jitters=10)
+            encodings = face_recognition.face_encodings(image, num_jitters=FACE_NUM_JITTERS)
             if not encodings:
                 print(f"[WARN] No face found in {image_path.name}; skipping.")
                 continue
@@ -151,17 +173,49 @@ class FaceEmotionModule:
         return frame[t:b, l:r]
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _preprocess_face(face_bgr: np.ndarray) -> np.ndarray:
+        """Feature 3: Apply CLAHE and consistent resizing before emotion analysis."""
+        if face_bgr is None or face_bgr.size == 0:
+            return face_bgr
+
+        # Convert to LAB and equalise luminance
+        lab = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2LAB)
+        l_channel, a_channel, b_channel = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l_equalised = clahe.apply(l_channel)
+        lab_eq = cv2.merge([l_equalised, a_channel, b_channel])
+        eq_bgr = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
+
+        # Light bilateral filter for noise reduction
+        filtered = cv2.bilateralFilter(eq_bgr, d=5, sigmaColor=50, sigmaSpace=50)
+
+        # Resize to consistent input size
+        resized = cv2.resize(filtered, DEEPFACE_INPUT_SIZE, interpolation=cv2.INTER_AREA)
+        return resized
+
+    # ------------------------------------------------------------------
     def _detect_emotion(self, face_bgr: np.ndarray) -> Tuple[str, float]:
-        """Return (emotion, confidence_score_0_to_100)."""
+        """Return (emotion, confidence_score_0_to_100).
+        
+        Feature 2: Uses detector_backend='skip' (face is pre-cropped).
+        Feature 3: Applies CLAHE preprocessing.
+        Bug F fix: includes minimum size guard.
+        """
         if DeepFace is None:
             return "unknown", 0.0
 
+        # Bug F fix: minimum face size check
+        if face_bgr.shape[0] < FACE_MIN_SIZE or face_bgr.shape[1] < FACE_MIN_SIZE:
+            return "unknown", 0.0
+
         try:
+            preprocessed = self._preprocess_face(face_bgr)
             result = DeepFace.analyze(
-                img_path=face_bgr,
+                img_path=preprocessed,
                 actions=["emotion"],
                 enforce_detection=False,
-                detector_backend="opencv",
+                detector_backend="skip",
                 silent=True,
             )
         except Exception:
@@ -248,7 +302,8 @@ class FaceEmotionModule:
         for det in detections:
             top, right, bottom, left = det.box
             cv2.rectangle(frame_bgr, (left, top), (right, bottom), (0, 255, 0), 2)
-            label = f"{det.name} | {det.emotion}"
+            tr_emotion = EMOTION_TR.get(det.emotion, det.emotion)
+            label = f"{det.name} | {tr_emotion}"
             if det.name != "Unknown":
                 label += f" ({det.confidence:.2f})"
 
@@ -267,39 +322,96 @@ class FaceEmotionModule:
 
 
 # ---------------------------------------------------------------------------
-# Notifications
+# Sustained distress tracker (per-person)
 # ---------------------------------------------------------------------------
-_last_notification_time = time.time() - NOTIFICATION_COOLDOWN_SECS
+class DistressTracker:
+    """Tracks continuous negative smoothed emotion duration per person.
+    
+    An emergency call is only triggered when a known person shows a negative
+    emotion continuously for SUSTAINED_DISTRESS_SECONDS, preventing false 
+    alarms from momentary expressions.
+    """
+
+    def __init__(self, sustained_seconds: float = SUSTAINED_DISTRESS_SECONDS) -> None:
+        self._start_times: Dict[str, float] = {}
+        self._sustained_seconds = sustained_seconds
+
+    def update(self, person: str, emotion: str) -> bool:
+        """Update the tracker and return True if the time threshold is reached."""
+        if emotion in NOTIFICATION_EMOTIONS:
+            if person not in self._start_times:
+                self._start_times[person] = time.time()
+            else:
+                elapsed = time.time() - self._start_times[person]
+                if elapsed >= self._sustained_seconds:
+                    # Reset after triggering so the next trigger requires another sustained period
+                    self._start_times[person] = time.time()
+                    return True
+        else:
+            # Reset on any non-negative emotion
+            if person in self._start_times:
+                del self._start_times[person]
+        return False
 
 
-def send_notification(name: str, notification_uuid: str, emotion: str, backend_url: str) -> None:
-    """Send a push notification asynchronously only if the cooldown has elapsed."""
-    global _last_notification_time
-    if time.time() - _last_notification_time < NOTIFICATION_COOLDOWN_SECS:
+# ---------------------------------------------------------------------------
+# Emergency call trigger
+# ---------------------------------------------------------------------------
+_last_emergency_time: float = 0.0
+
+
+def trigger_emergency_call(name: str, notification_uuid: str, emotion: str, backend_url: str) -> None:
+    """Trigger an emergency call via the backend when sustained distress is detected.
+    
+    The backend will:
+    1. Patch the AI assistant with a calming distress prompt
+    2. Send a high-priority push notification that auto-starts the voice call
+    """
+    global _last_emergency_time
+    now = time.time()
+    if now - _last_emergency_time < EMERGENCY_COOLDOWN_SECS:
+        remaining = int(EMERGENCY_COOLDOWN_SECS - (now - _last_emergency_time))
+        print(f"[EMERGENCY] Cooldown active — {remaining}s remaining. Skipping.")
         return
         
-    _last_notification_time = time.time()
+    _last_emergency_time = now
+    print(f"[EMERGENCY] ⚠️  Sustained distress detected for '{name}' — emotion: {emotion}")
+    print(f"[EMERGENCY] Triggering emergency call via backend...")
 
     def _post():
         try:
+            headers = {}
+            if EMERGENCY_API_KEY:
+                headers["X-Emergency-Key"] = EMERGENCY_API_KEY
             resp = requests.post(
-                f"{backend_url}/api/notify",
+                f"{backend_url}/api/emergency-call",
                 json={
                     "notification_uuid": notification_uuid,
-                    "title": "Sonia",
-                    "body": f"{emotion} algılandı",
-                    "data": {"screen": "talk-ai"},
+                    "emotion": emotion,
                 },
-                timeout=10,
+                headers=headers,
+                timeout=15,
             )
             if resp.ok:
-                print(f"[NOTIFY] Sent notification for '{name}' — {emotion}")
+                data = resp.json()
+                print(f"[EMERGENCY] ✅ Call triggered successfully:")
+                print(f"  → Assistant patched: {data.get('assistant_patched', False)}")
+                print(f"  → Notification sent: {data.get('notification_sent', False)}")
+                print(f"  → Devices notified:  {data.get('devices_notified', 0)}")
             else:
-                print(f"[NOTIFY] Failed ({resp.status_code}): {resp.text}")
+                print(f"[EMERGENCY] ❌ Backend returned {resp.status_code}: {resp.text}")
         except Exception as e:
-            print(f"[NOTIFY] Error: {e}")
+            print(f"[EMERGENCY] ❌ Error: {e}")
 
     threading.Thread(target=_post, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Legacy notification function (kept for backwards compatibility)
+# ---------------------------------------------------------------------------
+def send_notification(name: str, notification_uuid: str, emotion: str, backend_url: str) -> None:
+    """Send a push notification asynchronously (legacy — use trigger_emergency_call instead)."""
+    trigger_emergency_call(name, notification_uuid, emotion, backend_url)
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +423,7 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
         raise ValueError("BACKEND_URL is not defined in environment variables")
         
     module = FaceEmotionModule(known_faces_dir=known_faces_dir)
+    distress_tracker = DistressTracker()
 
     cap = cv2.VideoCapture(camera)
     if not cap.isOpened():
@@ -318,6 +431,13 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
         return 1
 
     print("[INFO] Press 'q' to quit.")
+    if notification_uuid:
+        print(f"[INFO] Emergency call enabled (UUID: {notification_uuid})")
+        print(f"[INFO] Sustained distress threshold: {SUSTAINED_DISTRESS_SECONDS} seconds")
+        print(f"[INFO] Emergency cooldown: {EMERGENCY_COOLDOWN_SECS}s")
+    else:
+        print("[INFO] No notification UUID — emergency calls disabled.")
+
     prev_smoothed: Dict[str, str] = {}
 
     try:
@@ -333,16 +453,21 @@ def run_webcam(known_faces_dir: Path, camera: int = 0, notification_uuid: Option
                 person_key = det.name if det.name != "Unknown" else f"unk_{det.box[3]}_{det.box[0]}"
                 prev = prev_smoothed.get(person_key)
                 if prev != det.emotion and det.emotion != "unknown":
-                    print(f"[INFO] {det.name}: {det.emotion} (conf {det.emotion_confidence:.0f}%)")
+                    tr_emotion = EMOTION_TR.get(det.emotion, det.emotion)
+                    print(f"[INFO] {det.name}: {tr_emotion} (conf {det.emotion_confidence:.0f}%)")
                 prev_smoothed[person_key] = det.emotion
 
-                # Notify only for known faces with a stable negative emotion
+                # Emergency call: only for known faces with sustained negative emotion
                 if (
                     notification_uuid
                     and det.name != "Unknown"
-                    and det.emotion in NOTIFICATION_EMOTIONS
+                    and det.emotion != "unknown"
                 ):
-                    send_notification(det.name, notification_uuid, det.emotion, backend_url)
+                    should_trigger = distress_tracker.update(person_key, det.emotion)
+                    if should_trigger:
+                        trigger_emergency_call(
+                            det.name, notification_uuid, det.emotion, backend_url
+                        )
 
             annotated = module.draw(frame, detections)
             cv2.imshow("Face Recognition + Emotion", annotated)
@@ -370,7 +495,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--notification-uuid",
         type=str,
         default=None,
-        help="16-char notification UUID from the admin panel (enables push notifications)",
+        help="16-char notification UUID from the admin panel (enables emergency calls on distress)",
     )
     return parser.parse_args(argv)
 

@@ -4,4 +4,5 @@ export interface Command {
   prompt: string;
   firstMessage?: string;
   expanded: boolean;
+  assistantId?: string;
 }

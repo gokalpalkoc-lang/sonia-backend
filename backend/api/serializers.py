@@ -11,7 +11,8 @@ class RegisterSerializer(serializers.Serializer):
     menu_pin = serializers.CharField(max_length=4, required=False, allow_blank=True, default='')
 
     def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
+        value = value.strip().lower()
+        if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError("Bu kullanıcı adı zaten alınmış.")
         return value
 

@@ -163,7 +163,7 @@ export default function VoiceSetupScreen() {
       );
       setPhase("idle");
     }
-  }, [recorder, router, waitForRecordingUri]);
+  }, [recorder, router, waitForRecordingUri, refreshProfile]);
   useEffect(() => {
     stopAndUploadRef.current = stopAndUpload;
   }, [stopAndUpload]);

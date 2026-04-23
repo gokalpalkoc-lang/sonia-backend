@@ -14,4 +14,4 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // Default model to use for new assistants
-export const DEFAULT_MODEL = "gpt-5-mini";
+export const DEFAULT_MODEL = "gpt-4o-mini";

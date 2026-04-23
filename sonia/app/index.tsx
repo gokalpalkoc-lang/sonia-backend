@@ -51,7 +51,11 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert("Missing Data", "Please enter username and password.");
+      if (Platform.OS === "web") {
+        window.alert("Missing Data: Please enter username and password.");
+      } else {
+        Alert.alert("Missing Data", "Please enter username and password.");
+      }
       return;
     }
 
@@ -60,7 +64,12 @@ export default function LoginScreen() {
       await login(username.trim(), password);
       // After login, the token state updates and causes a redirect above
     } catch (error: any) {
-      Alert.alert("Access denied.", error.message || "Please try again.");
+      const msg = error.message || "Please try again.";
+      if (Platform.OS === "web") {
+        window.alert("Access denied: " + msg);
+      } else {
+        Alert.alert("Access denied", msg);
+      }
     } finally {
       setIsLoading(false);
     }

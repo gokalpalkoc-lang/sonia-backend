@@ -63,3 +63,24 @@ class PushToken(models.Model):
 
     def __str__(self):
         return self.token
+
+
+class EmotionLog(models.Model):
+    """Feature 7: Persistent emotion detection history for monitoring patient state over time."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='emotion_logs')
+    person_name = models.CharField(max_length=255)
+    raw_emotion = models.CharField(max_length=50)
+    smoothed_emotion = models.CharField(max_length=50)
+    confidence = models.FloatField(default=0.0)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['person_name', '-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.person_name}: {self.smoothed_emotion} ({self.confidence:.0f}%) @ {self.timestamp}"
+

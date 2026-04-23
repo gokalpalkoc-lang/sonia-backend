@@ -125,7 +125,7 @@ export default function AddCommandScreen() {
         {/* Prompt (System Prompt Addition) */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>System Prompt Addition</Text>
         <Text style={[styles.fieldHint, { color: colors.textMuted }]}>
-          This will be appended to the assistant's base prompt during the conversation.
+          This will be appended to the assistant&apos;s base prompt during the conversation.
         </Text>
         <TextInput
           style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}

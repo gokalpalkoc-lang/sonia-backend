@@ -210,7 +210,14 @@ export default function CarouselScreen() {
 
     // Restart from beginning and play
     player.seekTo(0);
-    player.play();
+    try {
+      const playPromise = player.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch((e: any) => console.warn("Play failed (needs interaction first):", e));
+      }
+    } catch (e) {
+      console.warn("Play failed:", e);
+    }
   };
 
   const navigate = (direction: "left" | "right") => {
@@ -244,9 +251,16 @@ export default function CarouselScreen() {
   useEffect(() => {
     if (autoplaySound && voiceReady) {
       player.seekTo(0);
-      player.play();
+      try {
+        const playPromise = player.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((e: any) => console.warn("Autoplay blocked by browser:", e));
+        }
+      } catch (e) {
+        console.warn("Autoplay blocked by browser:", e);
+      }
     }
-  }, [currentIndex]);
+  }, [currentIndex, autoplaySound, voiceReady, player]);
 
   const handleLogout = async () => {
     closeMenu();
@@ -521,6 +535,32 @@ export default function CarouselScreen() {
                 onPress={() => {
                   closeMenu();
                   setTimeout(() => router.push("/voice-setup"), 250);
+                }}
+              />
+
+              {/* Face Detection Camera */}
+              <MenuItem
+                icon="📷"
+                label="Face Detection"
+                surfaceColor={colors.surface}
+                textColor={colors.text}
+                textSecondaryColor={colors.textSecondary}
+                onPress={() => {
+                  closeMenu();
+                  setTimeout(() => router.push("/camera-detect"), 250);
+                }}
+              />
+
+              {/* Emotion Setup */}
+              <MenuItem
+                icon="🎭"
+                label="Emotion Setup"
+                surfaceColor={colors.surface}
+                textColor={colors.text}
+                textSecondaryColor={colors.textSecondary}
+                onPress={() => {
+                  closeMenu();
+                  setTimeout(() => router.push("/emotion-setup"), 250);
                 }}
               />
 

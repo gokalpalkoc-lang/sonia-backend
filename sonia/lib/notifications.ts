@@ -237,6 +237,7 @@ export async function stopCommandSyncService() {
 export function addNotificationReceivedListener(
   onReceive: (payload: NotificationPayload) => void,
 ) {
+  if (Platform.OS === "web") return { remove: () => {} } as any;
   return Notifications.addNotificationReceivedListener((notification) => {
     const data = notification.request.content.data ?? {};
     onReceive(toNotificationPayload(data));
@@ -246,6 +247,7 @@ export function addNotificationReceivedListener(
 export function addNotificationTapListener(
   onTap: (payload: NotificationPayload) => void,
 ) {
+  if (Platform.OS === "web") return { remove: () => {} } as any;
   return Notifications.addNotificationResponseReceivedListener((response) => {
     const data = response.notification.request.content.data ?? {};
     onTap(toNotificationPayload(data));

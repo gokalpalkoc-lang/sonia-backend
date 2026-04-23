@@ -19,7 +19,7 @@ export default function ProtectedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { commands, deleteCommand, toggleExpand, setCommands } = useCommands();
-  const { logout, profile } = useAuth();
+  const { logout } = useAuth();
   const { colors } = useTheme();
 
   // Fetch commands from backend on mount (authenticated)
@@ -33,7 +33,7 @@ export default function ProtectedScreen() {
       .catch((error) => {
         console.error("Error fetching commands:", error);
       });
-  }, []);
+  }, [setCommands]);
 
   const handleLogout = async () => {
     await logout();
@@ -79,7 +79,7 @@ export default function ProtectedScreen() {
             <Text style={styles.emptyIcon}>📋</Text>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No command yet</Text>
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-              Click "Add Command" to create your first command.
+              Click &quot;Add Command&quot; to create your first command.
             </Text>
           </View>
         )}

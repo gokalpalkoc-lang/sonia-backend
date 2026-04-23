@@ -179,12 +179,22 @@ function App() {
           model: {
             provider: "openai",
             model: "gpt-4o-mini",
-            systemPrompt: "Sen, Sonia adında nazik ve yardımsever bir Tıbbi asistansın. Türkçe konuşuyorsun. İhtiyaç duyan hastalara yol gösteriyorsun.",
+            messages: [
+              {
+                role: "system",
+                content: "Sen, Sonia adında nazik ve yardımsever bir Tıbbi asistansın. Türkçe konuşuyorsun. İhtiyaç duyan hastalara yol gösteriyorsun."
+              }
+            ],
             maxTokens: 500,
           },
           voice: {
             provider: "11labs",
             voiceId: voiceIdParam,
+          },
+          transcriber: {
+            provider: "deepgram",
+            model: "nova-2",
+            language: "tr",
           },
           firstMessage: "Merhaba, ben yapay zekâ asistanınızım. Size nasıl yardımcı olabilirim?"
         });

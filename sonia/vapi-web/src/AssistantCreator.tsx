@@ -62,7 +62,8 @@ function AssistantCreator({ onAssistantCreated }: AssistantCreatorProps) {
             voiceId: elevenLabsVoiceId,
           },
           transcriber: {
-            provider: '11labs',
+            provider: 'deepgram',
+            model: 'nova-2',
             language: 'tr',
           },
           firstMessage: 'Merhaba, nasılsın?',

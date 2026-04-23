@@ -105,6 +105,8 @@ function ThemedApp() {
         <Stack.Screen name="password" />
         <Stack.Screen name="protected" options={{ gestureEnabled: false }} />
         <Stack.Screen name="talk-ai" />
+        <Stack.Screen name="camera-detect" />
+        <Stack.Screen name="emotion-setup" />
         <Stack.Screen
           name="add-command"
           options={{ presentation: "modal", animation: "slide_from_bottom" }}

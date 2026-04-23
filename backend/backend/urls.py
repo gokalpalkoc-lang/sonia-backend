@@ -38,5 +38,13 @@ urlpatterns = [
     path('api/commands/called', views.update_called, name='update_called'),
     path('api/commands/last-called/<str:assistant_id>', views.get_last_called, name='get_last_called'),
     path('api/notify', views.notify_by_uuid, name='notify_by_uuid'),
+    path('api/emergency-call', views.emergency_call, name='emergency_call'),
+    path('api/analyze-frame', views.analyze_frame, name='analyze_frame'),
+    path('api/calibrate-emotion', views.calibrate_emotion, name='calibrate_emotion'),
+    path('api/calibration-status', views.calibration_status, name='calibration_status'),
+    path('api/register-face', views.register_face, name='register_face'),
+    path('api/emotion-history', views.emotion_history, name='emotion_history'),
+    path('api/faces', views.list_faces, name='list_faces'),
+    path('api/faces/delete', views.delete_face, name='delete_face'),
 ]
 

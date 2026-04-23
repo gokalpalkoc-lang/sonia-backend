@@ -29,15 +29,35 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!username.trim() || !password.trim()) {
-      Alert.alert("Missing data", "Please enter username and password.");
+      if (Platform.OS === "web") {
+        window.alert("Missing data: Please enter username and password.");
+      } else {
+        Alert.alert("Missing data", "Please enter username and password.");
+      }
+      return;
+    }
+    if (!patientName.trim()) {
+      if (Platform.OS === "web") {
+        window.alert("Missing data: Please enter patient name.");
+      } else {
+        Alert.alert("Missing data", "Please enter patient name.");
+      }
       return;
     }
     if (password.length < 8) {
-      Alert.alert("Weak password", "The password must be at least 8 characters long.");
+      if (Platform.OS === "web") {
+        window.alert("Weak password: The password must be at least 8 characters long.");
+      } else {
+        Alert.alert("Weak password", "The password must be at least 8 characters long.");
+      }
       return;
     }
     if (menuPin && (menuPin.length !== 4 || !/^\d{4}$/.test(menuPin))) {
-      Alert.alert("Invalid PIN", "Menu PIN must be exactly 4 digits.");
+      if (Platform.OS === "web") {
+        window.alert("Invalid PIN: Menu PIN must be exactly 4 digits.");
+      } else {
+        Alert.alert("Invalid PIN", "Menu PIN must be exactly 4 digits.");
+      }
       return;
     }
 
@@ -46,7 +66,12 @@ export default function RegisterScreen() {
       await register(username.trim(), password, patientName.trim(), menuPin.trim());
       router.replace("/");
     } catch (error: any) {
-      Alert.alert("Sign up failed", error.message || "Please try again.");
+      const msg = error.message || "Please try again.";
+      if (Platform.OS === "web") {
+        window.alert("Sign up failed: " + msg);
+      } else {
+        Alert.alert("Sign up failed", msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +113,7 @@ export default function RegisterScreen() {
           onChangeText={setPassword}
         />
 
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Patient name (optional)</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Patient name</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="eg. Ahmet Yılmaz"

@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     getAccessToken().then(async (storedToken) => {
       if (storedToken) {
-        setToken(storedToken);
         await fetchProfile(storedToken);
+        setToken(storedToken);
       }
       setIsLoading(false);
     });
@@ -105,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, isLoading]);
 
   const login = async (username: string, password: string) => {
+    username = username.trim().toLowerCase();
     const response = await fetch(`${BACKEND_URL}/api/auth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -118,8 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const data = await response.json();
     await setAuthTokens(data.access, data.refresh);
-    setToken(data.access);
     await fetchProfile(data.access);
+    setToken(data.access);
   };
 
   const register = async (
@@ -128,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     patientName = "",
     menuPin = "",
   ) => {
+    username = username.trim().toLowerCase();
     const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
