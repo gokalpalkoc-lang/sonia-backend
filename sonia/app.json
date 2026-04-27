@@ -41,7 +41,8 @@
         "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.bilisimcevre.sony"
+      "package": "com.bilisimcevre.sony",
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",

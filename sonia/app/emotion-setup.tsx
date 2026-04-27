@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TouchableOpacity, ActivityIndicator,
-  ScrollView, Alert, TextInput, FlatList, Pressable,
+  ScrollView, Alert, TextInput, Pressable,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter, useNavigation } from 'expo-router';
@@ -77,12 +77,14 @@ export default function EmotionSetupScreen() {
   const loadFaces = useCallback(async () => {
     try {
       setFacesLoading(true);
-      const res = await apiFetch('/api/faces');
+      const res = await apiFetch(`/api/faces?t=${Date.now()}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.faces)) {
         setFaces(data.faces);
         if (data.faces.length > 0) {
           setFaceRegistered(true);
+        } else {
+          setFaceRegistered(false);
         }
       }
     } catch {
@@ -100,7 +102,7 @@ export default function EmotionSetupScreen() {
   useEffect(() => {
     if (!personName || personName === 'Bilinmeyen Kişi') return;
 
-    apiFetch(`/api/calibration-status?person_name=${encodeURIComponent(personName)}`)
+    apiFetch(`/api/calibration-status?person_name=${encodeURIComponent(personName)}&t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.calibrated)) {

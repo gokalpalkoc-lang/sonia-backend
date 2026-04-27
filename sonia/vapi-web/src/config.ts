@@ -5,9 +5,10 @@ export const VAPI_PUBLIC_KEY = "23ae90c6-aed9-4b02-b6bb-efb94a9ba2d1";
 export const ASSISTANT_ID =
   import.meta.env.VITE_ASSISTANT_ID || "2135f31f-5c85-4517-9574-571a1b1d0e38";
 
-// API key for creating assistants via Vapi API (server-side)
-// This should be kept secret and not exposed in frontend for production
-export const VAPI_API_KEY = "475a65ff-0aa5-4dac-b9f2-52a16f2c7bba";
+// API key for creating assistants via Vapi API (server-side only)
+// WARNING: Do NOT expose this in production frontend builds.
+// This should be moved to a backend endpoint for production use.
+export const VAPI_API_KEY = import.meta.env.VITE_VAPI_API_KEY || "";
 
 // Django API base URL
 export const API_BASE_URL =

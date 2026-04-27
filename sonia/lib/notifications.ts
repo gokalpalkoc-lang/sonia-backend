@@ -16,6 +16,7 @@ export interface NotificationPayload {
   screen?: string;
   commandText?: string;
   assistantId?: string;
+  commandId?: string | number;
 }
 
 function toNotificationPayload(data: Record<string, unknown>) {
@@ -25,6 +26,7 @@ function toNotificationPayload(data: Record<string, unknown>) {
       typeof data.commandText === "string" ? data.commandText : undefined,
     assistantId:
       typeof data.assistantId === "string" ? data.assistantId : undefined,
+    commandId: data.commandId as string | number | undefined,
   } satisfies NotificationPayload;
 }
 
@@ -139,6 +141,7 @@ export async function scheduleCommandReminder(command: Command) {
         screen: "talk-ai",
         commandText,
         assistantId: command.assistantId ?? "",
+        commandId: command.id,
       },
     },
     trigger: {

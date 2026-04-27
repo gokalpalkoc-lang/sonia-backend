@@ -154,7 +154,8 @@ def register_face(name: str, image_bgr: np.ndarray) -> tuple[bool, str]:
     # Force reload of face DB on next call (thread-safe)
     with _faces_lock:
         _is_loaded = False
-    load_known_faces()
+    # Delay load to next usage
+    # load_known_faces()
 
     print(f"[INFO] Registered new face: {safe_name} -> {dest_path.name}")
     return True, f"{safe_name} yüzü başarıyla kaydedildi."
@@ -212,10 +213,11 @@ def delete_face(filename: str) -> tuple[bool, str]:
         target.unlink()
         print(f"[INFO] Deleted face image: {filename}")
 
-        # Force reload of face DB
+        # Force reload of face DB on next call
         with _faces_lock:
             _is_loaded = False
-        load_known_faces()
+        # Delay load to next usage
+        # load_known_faces()
 
         return True, f"{person_name} yüz resmi silindi."
     except Exception as e:

@@ -96,7 +96,9 @@ export default function TalkAIScreen() {
       if (!status.granted) {
         Alert.alert(
           "Access to Microphone required",
-          "You need to give access to microphone in order to talk with artificial intelligence.",
+          profile?.username 
+            ? `You need to give access to microphone in order to call ${profile.username}.`
+            : "You need to give access to microphone in order to make a call.",
         );
       }
     } catch (error) {
@@ -209,7 +211,7 @@ export default function TalkAIScreen() {
         >
           <Text style={[styles.backButtonText, { color: colors.text }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>✦ Talk with Artificial Intelligence</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>✦ {profile?.username ? `Call ${profile.username}` : 'Call'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -238,7 +240,7 @@ export default function TalkAIScreen() {
             renderLoading={() => (
               <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
                 <ActivityIndicator size="large" color={colors.accent} />
-                <Text style={[styles.loadingText, { color: colors.text }]}>Artifical Intelligence screen loading...</Text>
+                <Text style={[styles.loadingText, { color: colors.text }]}>{profile?.username ? `Calling ${profile.username}...` : 'Calling...'}</Text>
               </View>
             )}
           />
@@ -247,7 +249,9 @@ export default function TalkAIScreen() {
         <View style={styles.permissionContainer}>
           <Text style={[styles.permissionTitle, { color: colors.text }]}>Waiting for microphone access</Text>
           <Text style={[styles.permissionText, { color: colors.textSecondary }]}>
-            Microphone Access is required in order to talk with Artificial Intelligence.
+            {profile?.username 
+              ? `Microphone Access is required in order to call ${profile.username}.`
+              : "Microphone Access is required in order to make a call."}
           </Text>
           <TouchableOpacity
             style={[styles.permissionButton, { backgroundColor: colors.accent }]}

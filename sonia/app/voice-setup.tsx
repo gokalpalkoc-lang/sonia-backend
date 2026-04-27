@@ -272,7 +272,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0px 6px 18px rgba(79, 70, 229, 0.45)",
     elevation: 10,
     marginBottom: 20,
   },

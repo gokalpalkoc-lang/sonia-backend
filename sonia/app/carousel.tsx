@@ -211,10 +211,7 @@ export default function CarouselScreen() {
     // Restart from beginning and play
     player.seekTo(0);
     try {
-      const playPromise = player.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch((e: any) => console.warn("Play failed (needs interaction first):", e));
-      }
+      player.play();
     } catch (e) {
       console.warn("Play failed:", e);
     }
@@ -252,10 +249,7 @@ export default function CarouselScreen() {
     if (autoplaySound && voiceReady) {
       player.seekTo(0);
       try {
-        const playPromise = player.play();
-        if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch((e: any) => console.warn("Autoplay blocked by browser:", e));
-        }
+        player.play();
       } catch (e) {
         console.warn("Autoplay blocked by browser:", e);
       }
@@ -316,10 +310,12 @@ export default function CarouselScreen() {
 
         <TouchableOpacity
           style={[styles.aiButton, { backgroundColor: colors.accent }]}
-          onPress={() => router.push("/talk-ai")}
+          onPress={() => router.push({ pathname: "/talk-ai", params: { autoStart: "1", assistantId: profile?.assistant_id || "" } })}
           activeOpacity={0.7}
         >
-          <Text style={styles.aiButtonText}>✦ Yapay Zekâ ile Konuş</Text>
+          <Text style={styles.aiButtonText}>
+            ✦ {profile?.username ? `${profile.username} ile Konuş` : "Yapay Zekâ ile Konuş"}
+          </Text>
         </TouchableOpacity>
 
         {/* Options button */}
@@ -349,7 +345,6 @@ export default function CarouselScreen() {
               {
                 transform: [{ scale: scaleAnim }],
                 opacity: fadeAnim,
-                boxShadow: `0px 8px 20px ${colors.cardShadow}`,
               },
             ]}
           >
@@ -573,7 +568,7 @@ export default function CarouselScreen() {
                 textSecondaryColor={colors.textSecondary}
                 onPress={() => {
                   closeMenu();
-                  setTimeout(() => router.push("/talk-ai"), 250);
+                  setTimeout(() => router.push({ pathname: "/talk-ai", params: { autoStart: "1", assistantId: profile?.assistant_id || "" } }), 250);
                 }}
               />
 
@@ -710,7 +705,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     maxHeight: "80%",
     // Subtle shadow for the panel
-    boxShadow: "0px -4px 24px rgba(0,0,0,0.25)",
     elevation: 20,
   },
   menuHandle: {

@@ -15,16 +15,30 @@ import {
   initializeNotifications,
   type NotificationPayload,
 } from "@/lib/notifications";
+import { apiFetch } from "@/lib/api";
 
 function NavigationEffects() {
   const router = useRouter();
 
   useEffect(() => {
-    const openTalkAi = ({
+    const openTalkAi = async ({
       screen,
       assistantId,
+      commandId,
     }: NotificationPayload) => {
       if (screen !== "talk-ai") return;
+
+      if (commandId) {
+        try {
+          await apiFetch('/api/commands/activate', {
+            method: 'POST',
+            body: JSON.stringify({ commandId }),
+          });
+          console.log(`Activated command ${commandId} from notification.`);
+        } catch (error) {
+          console.warn("Failed to activate command from notification", error);
+        }
+      }
 
       router.push({
         pathname: "/talk-ai",
@@ -42,15 +56,17 @@ function NavigationEffects() {
     // Handle cold-start: if the app was killed and user tapped a notification,
     // the tap listener won't fire. Check for the last notification response.
     if (Platform.OS !== "web") {
-      const response = Notifications.getLastNotificationResponse();
-      if (response) {
-        const data = response.notification.request.content.data ?? {};
-        openTalkAi({
-          screen: typeof data.screen === "string" ? data.screen : undefined,
-          assistantId:
-            typeof data.assistantId === "string" ? data.assistantId : undefined,
-        });
-      }
+      (async () => {
+        const response = await Notifications.getLastNotificationResponse();
+        if (response) {
+          const data = response.notification.request.content.data ?? {};
+          openTalkAi({
+            screen: typeof data.screen === "string" ? data.screen : undefined,
+            assistantId:
+              typeof data.assistantId === "string" ? data.assistantId : undefined,
+          });
+        }
+      })();
     }
 
     const notificationTapSubscription = addNotificationTapListener(openTalkAi);

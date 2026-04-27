@@ -8,7 +8,11 @@
       "android": {
         "buildType": "apk"
       },
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "http://192.168.11.177:8000",
+        "EXPO_PUBLIC_WEBSITE_URL": "https://192.168.11.177:5174"
+      }
     },
     "preview2": {
       "android": {
@@ -21,11 +25,20 @@
     "preview4": {
       "distribution": "internal"
     },
-    "production": {},
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://YOUR_PRODUCTION_SERVER.com",
+        "EXPO_PUBLIC_WEBSITE_URL": "https://sonia-vapi-web.vercel.app"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "http://192.168.11.177:8000",
+        "EXPO_PUBLIC_WEBSITE_URL": "https://192.168.11.177:5174"
+      }
     }
   }
 }

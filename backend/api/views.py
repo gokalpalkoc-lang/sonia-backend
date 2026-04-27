@@ -238,34 +238,8 @@ def commands(request):
                 first_message=first_message,
             )
 
-            # Patch the user's single assistant with the appended prompt
-            user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
-            if user_profile.assistant_id:
-                new_prompt = f"{MASTER_PROMPT}\n\n--- ACTIVE COMMAND ---\n{prompt}"
-                try:
-                    resp = _patch_assistant_prompt(user_profile.assistant_id, new_prompt)
-                    if resp.ok:
-                        # Also update first message if provided
-                        if first_message:
-                            import requests
-                            requests.patch(
-                                f'https://api.vapi.ai/assistant/{user_profile.assistant_id}',
-                                headers={
-                                    'Content-Type': 'application/json',
-                                    'Authorization': f'Bearer {VAPI_API_KEY}',
-                                },
-                                json={'firstMessage': first_message},
-                                timeout=30,
-                            )
-                        user_profile.active_command = command
-                        user_profile.save()
-                        logger.info(f'Patched assistant {user_profile.assistant_id} with command {command.pk}')
-                    else:
-                        logger.error(f'Failed to patch assistant: {resp.status_code} {resp.text}')
-                except Exception as e:
-                    logger.error(f'Error patching assistant: {e}')
-            else:
-                logger.warning('User has no assistant_id — command stored but not applied')
+            # Do NOT patch the assistant's prompt yet. 
+            # The patching will happen when the scheduled notification triggers and hits the /api/commands/activate endpoint.
 
             return JsonResponse({
                 'success': True,

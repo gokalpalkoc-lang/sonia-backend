@@ -21,6 +21,7 @@ function App() {
     userAssistantId || queryAssistantId || earlyStartAssistantId || defaultFallback,
   );
   const isVapiInitialized = useRef(false);
+  const revertAssistantPromptRef = useRef<() => Promise<void>>(async () => {});
 
   const getInitialCalledToday = (): Set<string> => {
     const today = new Date().toISOString().split("T")[0];
@@ -108,6 +109,11 @@ function App() {
     }
   };
 
+  // Keep the ref up-to-date so the call-end handler always uses the latest closure
+  useEffect(() => {
+    revertAssistantPromptRef.current = revertAssistantPrompt;
+  });
+
   useEffect(() => {
     if (isVapiInitialized.current) {
       return;
@@ -123,8 +129,8 @@ function App() {
 
     vapi.on("call-end", () => {
       setIsCallActive(false);
-      // Revert the system prompt when the conversation ends
-      revertAssistantPrompt();
+      // Use ref to avoid stale closure — always calls the latest version
+      revertAssistantPromptRef.current();
     });
 
     vapi.on("error", (error: any) => {

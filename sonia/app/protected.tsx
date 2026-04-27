@@ -50,8 +50,14 @@ export default function ProtectedScreen() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Navigate to talk-ai — the assistant prompt has been patched
-        router.push("/talk-ai");
+        // Navigate to talk-ai with autoStart — the assistant prompt has been patched
+        router.push({
+          pathname: "/talk-ai",
+          params: {
+            autoStart: "1",
+            assistantId: data.assistantId || "",
+          },
+        });
       } else {
         Alert.alert("Error", data.error || "Could not activate command.");
       }
