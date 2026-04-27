@@ -1,0 +1,17 @@
+elevenlabs
+python-dotenv
+Django
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+daphne
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
+numpy
+opencv-python
+face-recognition
+deepface
+Pillow
+requests
