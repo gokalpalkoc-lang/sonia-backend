@@ -10,7 +10,7 @@
       },
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "http://192.168.11.177:8000",
+        "EXPO_PUBLIC_BACKEND_URL": "https://sonia-backend-1.onrender.com",
         "EXPO_PUBLIC_WEBSITE_URL": "https://192.168.11.177:5174"
       }
     },
@@ -26,9 +26,10 @@
       "distribution": "internal"
     },
     "production": {
-      "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://YOUR_PRODUCTION_SERVER.com",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://sonia-vapi-web.vercel.app"
+      "environment": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
       }
     },
     "development": {
@@ -36,7 +37,7 @@
       "distribution": "internal",
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "http://192.168.11.177:8000",
+        "EXPO_PUBLIC_BACKEND_URL": "https://sonia-backend-1.onrender.com",
         "EXPO_PUBLIC_WEBSITE_URL": "https://192.168.11.177:5174"
       }
     }
