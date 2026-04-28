@@ -9,3 +9,9 @@ gunicorn
 whitenoise
 dj-database-url
 psycopg2-binary
+numpy
+opencv-python
+face-recognition
+deepface
+Pillow
+requests
