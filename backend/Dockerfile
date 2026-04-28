@@ -1,23 +1,28 @@
-FROM python:3.10-slim
+FROM ubuntu:22.04
 
-# Install system dependencies for OpenCV and dlib (face-recognition)
+# Prevent interactive prompts during apt-get
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install python, pip, and PRE-COMPILED dlib (bypasses all compile errors!)
 RUN apt-get update && apt-get install -y \
-    cmake \
+    python3 \
+    python3-pip \
+    python3-dlib \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy requirements and install
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the backend code
+# Install the rest of the python requirements
+# Since python3-dlib is already installed by apt, pip will completely skip building dlib!
+RUN pip3 install --no-cache-dir -r requirements.txt
+
 COPY . .
 
 EXPOSE 8000
 
-# Run migrations and start the server
-CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"]
+CMD ["sh", "-c", "python3 manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8000 backend.asgi:application"]
